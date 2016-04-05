@@ -53,8 +53,9 @@ summarizer = Summarizer(stemmer)
 summarizer.stop_words = get_stop_words(LANGUAGE)
 SENTENCES_COUNT = len(sens)
 
-print SENTENCES_COUNT
-print len(summarizer(tweet_document, SENTENCES_COUNT))
+print summarizer(tweet_document, SENTENCES_COUNT)[sens[0]]
+#print SENTENCES_COUNT
+#print len(summarizer(tweet_document, SENTENCES_COUNT))
 
 
 #print len(tweets)#_string
