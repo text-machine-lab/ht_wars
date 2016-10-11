@@ -21,10 +21,26 @@ dataset_path = './train_dir/train_data/'
 def main():
     print "Processing #HashtagWars data..."
     hashtags = get_hashtag_file_names()
+    char_to_index = build_character_vocabulary(hashtags)
     for hashtag in hashtags:
         data = extract_hashtag_features_from_dataset(hashtag)
         save_hashtag_data(data, hashtag)
     print "Done!"
+    
+def build_character_vocabulary(hashtags):
+    '''Find all characters special or alphabetical that appear in the dataset.
+    Construct a vocabulary that assigns a unique index to each character and
+    return that vocabulary.'''
+    vocabulary = []
+    for hashtag in hashtags:
+        with open(dataset_path + hashtag + '.tsv') as tsv:
+            for line in csv.reader(tsv, dialect='excel-tab'):
+                for character in line[1]:
+                    # If character hasn't been seen before, add it to the vocabulary.
+                    if character not in vocabulary:
+                        vocabulary.append(character)
+    print vocabulary
+    return vocabulary
     
 def get_hashtag_file_names():
     '''Returns .tsv file name for each hashtag in the dataset.'''
