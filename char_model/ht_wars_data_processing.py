@@ -34,8 +34,11 @@ def main():
     print 'Saving char_to_index.cpkl containing character vocabulary'
     pickle.dump(char_to_index, open('char_to_index.cpkl', 'wb'))
     print "Done!"
+     
+# def main():
+#     test_reconstruct_tweets_from_file()
     
-def format_tweet_pairs(data, char_to_index, max_tweet_size=150):
+def format_tweet_pairs(data, char_to_index, max_tweet_size=140):
     '''This script converts every character in all tweets into an index.
     It stores each tweet side by side, each tweet constrained to 150 characters long.
     The total matrix is m x 300, for m tweet pairs, two 150 word tweets per row.'''
@@ -118,6 +121,7 @@ def build_character_vocabulary(hashtags):
     Construct a vocabulary that assigns a unique index to each character and
     return that vocabulary. Vocabulary does not include anything with a backslash.'''
     characters = []
+    characters.append('')
     for hashtag in hashtags:
         with open(dataset_path + hashtag + '.tsv') as tsv:
             for line in csv.reader(tsv, dialect='excel-tab'):
@@ -191,8 +195,8 @@ def save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag):
     print 'Saving data for hashtag %s' % hashtag
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    np.save(output_dir + hashtag + '.npy', np_tweet_pairs)
-    np.save(output_dir + hashtag + '.npy', np_tweet_pair_labels)
+    np.save(output_dir + hashtag + '_pairs.npy', np_tweet_pairs)
+    np.save(output_dir + hashtag + '_labels.npy', np_tweet_pair_labels)
     
 ### Unit Tests ###
 def test_get_hashtag_file_names():
@@ -201,6 +205,34 @@ def test_get_hashtag_file_names():
         assert '.tsv' not in name
     print len(file_names)
     assert len(file_names) == 101 #Number of hashtags in dataset
+
+def test_reconstruct_tweets_from_file():
+    max_tweet_size = 140
+    hashtags = get_hashtag_file_names()
+    char_to_index = pickle.load(open('char_to_index.cpkl', 'rb'))
+    index_to_char = {v: k for k, v in char_to_index.items()}
+    for hashtag in hashtags:
+        tweets = []
+        np_tweet_pairs = np.load(output_dir + hashtag + '_pairs.npy')
+        for i in range(np_tweet_pairs.shape[0]):
+            tweet_1_indices = np_tweet_pairs[i][:max_tweet_size]
+            tweet_2_indices = np_tweet_pairs[i][max_tweet_size:]
+            tweet1 = ''.join([index_to_char[tweet_1_indices[i]] for i in range(tweet_1_indices.size)])
+            tweet2 = ''.join([index_to_char[tweet_2_indices[i]] for i in range(tweet_2_indices.size)])
+            tweets.append(tweet1)
+            tweets.append(tweet2)
+        tweets = list(set(tweets))
+        with open(dataset_path + hashtag + '.tsv') as tsv:
+            for line in csv.reader(tsv, dialect='excel-tab'):
+                tweet = line[1]
+                if tweet <= max_tweet_size:
+                    assert tweet in tweets
+    
+    
+    
+    
+    
+    
     
 if __name__ == '__main__':
     main()
