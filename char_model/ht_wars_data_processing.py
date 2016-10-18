@@ -225,24 +225,31 @@ def test_reconstruct_tweets_from_file():
     hashtags = get_hashtag_file_names()
     char_to_index = pickle.load(open('char_to_index.cpkl', 'rb'))
     index_to_char = {v: k for k, v in char_to_index.items()}
-    for hashtag in hashtags:
-        tweets = []
-        np_tweet_pairs = np.load(train_output_dir + hashtag + '_pairs.npy')
-        for i in range(np_tweet_pairs.shape[0]):
-            tweet_1_indices = np_tweet_pairs[i][:max_tweet_size]
-            tweet_2_indices = np_tweet_pairs[i][max_tweet_size:]
-            tweet1 = ''.join([index_to_char[tweet_1_indices[i]] for i in range(tweet_1_indices.size)])
-            tweet2 = ''.join([index_to_char[tweet_2_indices[i]] for i in range(tweet_2_indices.size)])
-            tweets.append(tweet1)
-            tweets.append(tweet2)
-        tweets = list(set(tweets))
-        with open(dataset_path + hashtag + '.tsv') as tsv:
-            for line in csv.reader(tsv, dialect='excel-tab'):
-                tweet = line[1]
-                if tweet <= max_tweet_size:
-                    assert tweet in tweets
+    for (dirpath, dirnames, filenames) in walk('.'):
+        for filename in filenames:
+            if '_pairs.npy' in filename:
+                tweets = []
+                np_tweet_pairs = np.load(os.path.join(dirpath, filename))
+                for i in range(np_tweet_pairs.shape[0]):
+                    tweet_1_indices = np_tweet_pairs[i][:max_tweet_size]
+                    tweet_2_indices = np_tweet_pairs[i][max_tweet_size:]
+                    tweet1 = ''.join([index_to_char[tweet_1_indices[i]] for i in range(tweet_1_indices.size)])
+                    tweet2 = ''.join([index_to_char[tweet_2_indices[i]] for i in range(tweet_2_indices.size)])
+                    tweets.append(tweet1)
+                    tweets.append(tweet2)
+                tweets = list(set(tweets))
+                with open(dataset_path + filename.replace('_pairs.npy', '.tsv')) as tsv:
+                    for line in csv.reader(tsv, dialect='excel-tab'):
+                        tweet = line[1]
+                        if tweet <= max_tweet_size:
+                            assert tweet in tweets
     
-    
+def test_training_and_testing_sets_are_disjoint():
+    for (dirpath, dirnames, filenames) in walk(train_output_dir):
+        for (dirpath2, dirnames2, filenames2) in walk(test_output_dir):
+            for filename in filenames:
+                for filename2 in filenames2:
+                    assert filename != filename2
     
     
     
