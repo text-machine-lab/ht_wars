@@ -18,10 +18,9 @@ import cPickle as pickle
 tf.logging.set_verbosity(tf.logging.ERROR)
 
 # Training and testing data pulled from these directories.
-train_pairs_dir = './training_tweet_pairs/'
-test_pairs_dir = './testing_tweet_pairs/'
+tweet_pairs_dir = './numpy_tweet_pairs/'
 
-tweet_size = 140
+TWEET_SIZE = 140
 
 def main():
     # User must enter 'train' or 'test' for the program to execute successfully.
@@ -37,19 +36,28 @@ def main():
         print 'Usage: python ht_wars_char_model.py [train/test]'
 
 def train():
+    '''Load all tweet pairs per all hashtags. Per hashtag, train on all other hashtags, test on current hashtag.
+    Print out micro-accuracy each iteration and print out overall accuracy after.'''
     # Load training tweet pairs/labels, and train on them.
-    tweet_pairs, tweet_labels = load_tweet_pairs_and_labels(train_pairs_dir)
-    vocab_size = np.max(tweet_pairs) + 1
-    tweet1 = tweet_pairs[:,:tweet_size]
-    tweet2 = tweet_pairs[:,tweet_size:]
-    ht_wars_model = HashtagWarsCharacterModel(tweet_size=tweet_size, vocab_size=vocab_size)
-    ht_wars_model.train(tweet1, tweet2, tweet_labels)
+    hashtag_datas, char_to_index, vocab_size = load_hashtag_data_and_vocabulary(tweet_pairs_dir)
+#     all_tweet_pairs = np.concatenate([hashtag_datas[i][1] for i in range(len(hashtag_datas))])
+#     all_tweet_labels = np.concatenate([hashtag_datas[i][0] for i in range(len(hashtag_datas))])
     
-    # Load testing tweet pairs/labels, and test model accuracy.
-    test_tweet_pairs, test_tweet_labels = load_tweet_pairs_and_labels(test_pairs_dir)
-    test_tweet1 = test_tweet_pairs[:,:tweet_size]
-    test_tweet2 = test_tweet_pairs[:,tweet_size:]
-    ht_wars_model.predict(test_tweet1, test_tweet2, test_tweet_labels)
+    print
+    for i in range(len(hashtag_datas)):
+        # Train on all hashtags but one, test on one
+        ht_model = HashtagWarsCharacterModel(TWEET_SIZE, vocab_size)
+        
+        hashtag_name, np_hashtag_tweet1, np_hashtag_tweet2, np_hashtag_tweet_labels, np_other_tweet1, np_other_tweet2, np_other_tweet_labels = extract_hashtag_data_for_leave_one_out(hashtag_datas, i)
+        
+        print('Training model and testing on hashtag: %s' % hashtag_name)
+        print('Shape of training tweet1 input: %s' % str(np_other_tweet1.shape))
+        print('Shape of training tweet2 input: %s' % str(np_other_tweet2.shape))
+        print('Shape of testing hashtag tweet1 input: %s' % str(np_hashtag_tweet1.shape))
+        print('Shape of testing hashtag tweet2 input: %s' % str(np_hashtag_tweet2.shape))
+        
+        ht_model.train(np_other_tweet1, np_other_tweet2, np_other_tweet_labels)
+        ht_model.predict(np_hashtag_tweet1, np_hashtag_tweet2, np_hashtag_tweet_labels)
     print 'Done!'  
     
 def test():
@@ -62,7 +70,7 @@ class HashtagWarsCharacterModel:
         self.tweet_size = tweet_size
         self.vocab_size = vocab_size
         self.model = 0 # Uninitialized
-        print 'Initializing #HashtagWars character model'
+#         print 'Initializing #HashtagWars character model'
         
     def create_model(self):
         '''Load two tweets, analyze them with convolution and predict which is funnier.'''
@@ -149,10 +157,32 @@ class HashtagWarsCharacterModel:
             tweet_label_batch = labels[i*batch_size:i*batch_size+batch_size]
             loss, accuracy = model.evaluate([tweet1_batch, tweet2_batch], tweet_label_batch, batch_size=25)
             accuracies.append(accuracy)
-            
-        print 'Accuracy: %s' % np.mean(accuracies)
         
-        return np.random.choice(1, size=[len(tweet1)])
+        mean_accuracy = np.mean(accuracies)
+        print 'Accuracy: %s' % mean_accuracy
+        return mean_accuracy
+        
+        
+    
+def extract_hashtag_data_for_leave_one_out(hashtag_datas, i):
+    '''This function takes an index i representing a particular hashtag.
+    The hashtag name is returned, along with tweet pair/label data for both that hashtag and all other
+    hashtags combined. This corresponds with the leave-one-out methodology.'''
+    np_hashtag_tweet_pairs = hashtag_datas[i][1]
+    np_hashtag_tweet_labels = hashtag_datas[i][2]
+    hashtag_name = hashtag_datas[i][0]
+    other_tweet_pairs = [hashtag_datas[j][1] for j in range(i)] + [hashtag_datas[k][1] for k in range(i+1,len(hashtag_datas))]
+    other_tweet_labels = [hashtag_datas[j][2] for j in range(i)] + [hashtag_datas[k][2] for k in range(i+1,len(hashtag_datas))]
+    np_other_tweet_pairs = np.concatenate(other_tweet_pairs)
+    np_other_tweet_labels = np.concatenate(other_tweet_labels)
+    
+    np_hashtag_tweet1 = np_hashtag_tweet_pairs[:, :TWEET_SIZE]
+    np_hashtag_tweet2 = np_hashtag_tweet_pairs[:, TWEET_SIZE:]
+    np_other_tweet1 = np_other_tweet_pairs[:,:TWEET_SIZE]
+    np_other_tweet2 = np_other_tweet_pairs[:, TWEET_SIZE:]
+    
+    return hashtag_name, np_hashtag_tweet1, np_hashtag_tweet2, np_hashtag_tweet_labels, np_other_tweet1, np_other_tweet2, np_other_tweet_labels
+    
 
 def convert_tweets_to_one_hot(tweets, vocab_size):
     '''Converts all tweets (2d vector) into one-hot (3d vector).'''
@@ -165,26 +195,20 @@ def print_model_performance_statistics(tweet_labels, tweet_label_predictions):
     accuracy = np.mean(correct_predictions)
     print('Model test accuracy: %s' % accuracy)
     
-def load_tweet_pairs_and_labels(tweet_pairs_path):
-    all_tweet_pairs = []
-    all_tweet_labels = []
+def load_hashtag_data_and_vocabulary(tweet_pairs_path):
+    '''Load in tweet pairs per hashtag. Create a list of [hashtag_name, pairs, labels] entries.
+    Return tweet pairs, tweet labels, char_to_index.cpkl and vocabulary size.'''
+    hashtag_datas = []
     for (dirpath, dirnames, filenames) in walk(tweet_pairs_path):
         for filename in filenames:
             if '_pairs.npy' in filename:
+                hashtag_name = filename.replace('_pairs.npy','')
                 tweet_pairs = np.load(tweet_pairs_path + filename)
-                all_tweet_pairs.append(tweet_pairs)
-            elif '_labels.npy' in filename:
-                tweet_labels = np.load(tweet_pairs_path + filename)
-                all_tweet_labels.append(tweet_labels)
-    np_all_tweet_pairs = np.concatenate(all_tweet_pairs, axis=0)
-    np_all_tweet_labels = np.concatenate(all_tweet_labels, axis=0)
-    print 'Number of tweet pairs: %s' % np_all_tweet_pairs.shape[0]
-    print 'Size of each tweet pair: %s' % np_all_tweet_pairs.shape[1]
-    return np_all_tweet_pairs, np_all_tweet_labels
-    
-    
-    
-    
+                tweet_labels = np.load(tweet_pairs_path + hashtag_name + '_labels.npy')
+                hashtag_datas.append([hashtag_name, tweet_pairs, tweet_labels])
+    char_to_index = pickle.load(open('char_to_index.cpkl', 'rb'))
+    vocab_size = len(char_to_index)
+    return hashtag_datas, char_to_index, vocab_size
     
     
     

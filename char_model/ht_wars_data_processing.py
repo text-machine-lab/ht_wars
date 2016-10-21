@@ -6,8 +6,11 @@ directory (training_dir located in ./) and generates tweet pairs from them. Twee
     1.) Matching winning tweet with each other tweet in the top ten
     2.) Matching each tweet in the top ten with each non-winning tweet
     
-Each hashtag is saved as a list of tweet pairs. Each tweet pair is saved as two tweet texts and 0 or 1 for which is funnier.
-Each tweet text is saved as a numpy vector of numbers.
+Output of this script is saved to output_dir, in the form of hashtag files. Each file is a numpy array (.npy) that holds
+all the tweet pairs for that hashtag. The array is of the dimension tweet_pairs by (2 * max tweet length). Each row is
+then a tweet pair, with the first max_tweet_length elements being the first tweet, and the second max_tweet_length elements
+being the second tweet. Each element is an index to a character that appears in the dataset. The conversion from a character
+to its corresponding index is dictionary that can be found in char_to_index.cpkl, a file found in the ./ directory.
 '''
 from os import walk
 import csv
@@ -16,8 +19,7 @@ import os
 import random
 import numpy as np
 
-train_output_dir = './training_tweet_pairs/'
-test_output_dir = './testing_tweet_pairs/'
+output_dir = './numpy_tweet_pairs/'
 dataset_path = './train_dir/train_data/'
 
 def main():
@@ -32,8 +34,7 @@ def main():
         hashtag = hashtags[i]
         data = extract_tweet_pairs_from_file(dataset_path + hashtag + '.tsv')
         np_tweet_pairs, np_tweet_pair_labels = format_tweet_pairs(data, char_to_index)
-        is_training_hashtag = i > 20
-        save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag, is_training_hashtag)
+        save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag)
     print 'Saving char_to_index.cpkl containing character vocabulary'
     pickle.dump(char_to_index, open('char_to_index.cpkl', 'wb'))
     print "Done!"
@@ -197,20 +198,14 @@ def extract_tweet_pairs_from_file(hashtag_file):
                 pairs.append([top_ten_tweet, winning_tweet, 1])
     return pairs
 
-def save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag, training_hashtag):
+def save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag):
     print 'Saving data for hashtag %s' % hashtag
     # Create directories if they don't exist
-    if not os.path.exists(train_output_dir):
-        os.makedirs(train_output_dir)
-    if not os.path.exists(test_output_dir):
-        os.makedirs(test_output_dir)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     # Save hashtag tweet pair data into training or testing folders depending on training_hashtag
-    if training_hashtag:
-        np.save(train_output_dir + hashtag + '_pairs.npy', np_tweet_pairs)
-        np.save(train_output_dir + hashtag + '_labels.npy', np_tweet_pair_labels)
-    else:
-        np.save(test_output_dir + hashtag + '_pairs.npy', np_tweet_pairs)
-        np.save(test_output_dir + hashtag + '_labels.npy', np_tweet_pair_labels)
+    np.save(output_dir + hashtag + '_pairs.npy', np_tweet_pairs)
+    np.save(output_dir + hashtag + '_labels.npy', np_tweet_pair_labels)
     
 ### Unit Tests ###
 def test_get_hashtag_file_names():
@@ -245,7 +240,7 @@ def test_reconstruct_tweets_from_file():
                             assert tweet in tweets
     
 def test_training_and_testing_sets_are_disjoint():
-    for (dirpath, dirnames, filenames) in walk(train_output_dir):
+    for (dirpath, dirnames, filenames) in walk(output_dir):
         for (dirpath2, dirnames2, filenames2) in walk(test_output_dir):
             for filename in filenames:
                 for filename2 in filenames2:
