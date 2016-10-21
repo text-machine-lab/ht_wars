@@ -42,7 +42,7 @@ def train():
     hashtag_datas, char_to_index, vocab_size = load_hashtag_data_and_vocabulary(tweet_pairs_dir)
 #     all_tweet_pairs = np.concatenate([hashtag_datas[i][1] for i in range(len(hashtag_datas))])
 #     all_tweet_labels = np.concatenate([hashtag_datas[i][0] for i in range(len(hashtag_datas))])
-    
+    accuracies = []
     print
     for i in range(len(hashtag_datas)):
         # Train on all hashtags but one, test on one
@@ -57,7 +57,9 @@ def train():
         print('Shape of testing hashtag tweet2 input: %s' % str(np_hashtag_tweet2.shape))
         
         ht_model.train(np_other_tweet1, np_other_tweet2, np_other_tweet_labels)
-        ht_model.predict(np_hashtag_tweet1, np_hashtag_tweet2, np_hashtag_tweet_labels)
+        accuracy = ht_model.predict(np_hashtag_tweet1, np_hashtag_tweet2, np_hashtag_tweet_labels)
+        accuracies.append(accuracy)
+    print 'Total Model Accuracy: %s' % np.mean(accuracies)
     print 'Done!'  
     
 def test():
@@ -124,46 +126,69 @@ class HashtagWarsCharacterModel:
         # Hold model for predictions later
         self.model = model
         model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-        batch_size=100
-        
+        batch_size=1000
+        m = tweet1.shape[0]
         print 'Training #HashtagWars model...'
-        num_batches = (len(tweet1)-batch_size) / batch_size + 1
+        num_batches = m / batch_size
+        remaining_examples = m % batch_size
         print 'Number of training examples: %s' % (num_batches * batch_size)
         for i in range(num_batches):
             if i % 100 == 0:
                 print('Trained on %s examples' % (i * batch_size))
-            # Extract a batch of tweet pairs from total, convert to one-hot, and train.
-            tweet1_batch = tweet1[i*batch_size:i*batch_size+batch_size]
+            self.train_batch(model, tweet1, tweet2, labels, i * num_batches, i * num_batches + num_batches)
+        if remaining_examples > 0:
+            self.train_batch(model, tweet1, tweet2, labels, num_batches * batch_size, num_batches * batch_size + remaining_examples)
             
-            tweet2_batch = tweet2[i*batch_size:i*batch_size+batch_size]
-            
-            tweet_labels_batch = labels[i*batch_size:i*batch_size+batch_size]
-
-            model.train_on_batch([tweet1_batch, tweet2_batch], [tweet_labels_batch])
         print 'Finished training model'
     
     def predict(self, tweet1, tweet2, labels):
-        ''''''
+        '''This function uses the pretrained model in this object to predict the funnier of tweet pairs
+        tweet1 and tweet2, and calculates accuracy using the ground truth labels for each pair. The mean
+        accuracy is returned.'''
+        m = tweet1.shape[0]
         model = self.model
-        batch_size=1000
+        batch_size=5000
         accuracies = []
-        num_batches = (len(tweet1)-batch_size) / batch_size + 1
+        num_batches = m / batch_size
+        remaining_examples = m % batch_size
+        # Predict for all batches, then predict for remaining examples that don't fit in a batch.
         for i in range(num_batches):
-            # Extract a batch of tweet pairs from total, convert to one-hot, and train.
-            tweet1_batch = tweet1[i*batch_size:i*batch_size+batch_size]
-            
-            tweet2_batch = tweet2[i*batch_size:i*batch_size+batch_size]
-            
-            tweet_label_batch = labels[i*batch_size:i*batch_size+batch_size]
-            loss, accuracy = model.evaluate([tweet1_batch, tweet2_batch], tweet_label_batch, batch_size=25)
+            accuracy = self.predict_batch(model, tweet1, tweet2, labels, batch_size * i, batch_size * i + batch_size)
+            if np.isnan(accuracy):
+                print 'Model produces NAN accuracy!'
+            accuracies.append(accuracy)
+        if remaining_examples > 0:
+            accuracy = self.predict_batch(model, tweet1, tweet2, labels, num_batches * batch_size, num_batches * batch_size + remaining_examples)
             accuracies.append(accuracy)
         
         mean_accuracy = np.mean(accuracies)
+        if np.isnan(mean_accuracy):
+            print 'Model produces NAN mean accuracy!'
         print 'Accuracy: %s' % mean_accuracy
+        print
         return mean_accuracy
         
+    def predict_batch(self, model, tweet1, tweet2, labels, start_index, end_index):
+        '''Predict which tweet is funnier for all tweet1 and tweet2 from start_index to end_index. Returns accuracy of prediction.
+        Warning: end_index represents the index after the batch has ended. This is the default access format for numpy arrays.'''
+        # Extract a batch of tweet pairs from total, convert to one-hot, and train.
+        tweet1_batch = tweet1[start_index:end_index,:]
         
+        tweet2_batch = tweet2[start_index:end_index,:]
+        
+        tweet_label_batch = labels[start_index:end_index]
+        loss, accuracy = model.evaluate([tweet1_batch, tweet2_batch], tweet_label_batch, batch_size=tweet_label_batch.shape[0])
+        return accuracy
     
+    def train_batch(self, model, tweet1, tweet2, labels, start_index, end_index):
+        tweet1_batch = tweet1[start_index:end_index,:]
+        
+        tweet2_batch = tweet2[start_index:end_index,:]
+        
+        tweet_labels_batch = labels[start_index:end_index]
+
+        model.train_on_batch([tweet1_batch, tweet2_batch], [tweet_labels_batch])
+            
 def extract_hashtag_data_for_leave_one_out(hashtag_datas, i):
     '''This function takes an index i representing a particular hashtag.
     The hashtag name is returned, along with tweet pair/label data for both that hashtag and all other
