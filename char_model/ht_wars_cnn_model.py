@@ -1,6 +1,6 @@
 '''David Donahue 2016. This script is intended to run a model for the Semeval-2017 Task 6. It is
 trained on the #HashtagWars dataset and is designed to predict which of a pair of tweets is funnier.
-It is intended to reconstruct Alexey Romanov's model, which uses a character-by-character processing approach.'''
+It is intended to reconstruct Alexey Romanov's model, which uses a character-by-character processing approach using a CNN.'''
 
 # Many unused imports.
 import numpy as np
@@ -11,6 +11,7 @@ from keras.datasets import mnist
 from keras.models import Sequential, Model
 from keras.layers import Input, Dense, Dropout, Activation, Flatten, merge, Embedding
 from keras.layers import Convolution1D, MaxPooling1D
+from keras.layers.recurrent import LSTM
 from keras.utils import np_utils
 from keras import backend as K
 import cPickle as pickle

@@ -1,11 +1,11 @@
 '''David Donahue 18 October 2016. Unit tests for ht_wars_char_model.py'''
 
-import ht_wars_char_model
-from ht_wars_char_model import HashtagWarsCharacterModel
-from ht_wars_char_model import load_hashtag_data_and_vocabulary
-from ht_wars_char_model import extract_hashtag_data_for_leave_one_out
-from ht_wars_char_model import TWEET_SIZE
-from ht_wars_char_model import tweet_pairs_dir
+import ht_wars_cnn_model
+from ht_wars_cnn_model import HashtagWarsCharacterModel
+from ht_wars_cnn_model import load_hashtag_data_and_vocabulary
+from ht_wars_cnn_model import extract_hashtag_data_for_leave_one_out
+from ht_wars_cnn_model import TWEET_SIZE
+from ht_wars_cnn_model import tweet_pairs_dir
 import numpy as np
 from os import walk
 
