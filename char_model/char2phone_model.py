@@ -7,11 +7,17 @@ this purpose.'''
 import tensorflow as tf
 import numpy as np
 import sys
+import cPickle as pickle
 
 CMU_datafile = 'cmudict-0.7b.txt'
 CMU_symbols = 'cmudict-0.7b.symbols.txt'
+word_output = 'cmu_words.npy'
+pronunciation_output = 'cmu_pronunciations.npy'
+char_to_index_output = 'cmu_char_to_index.cpkl'
+phone_to_index_output = 'cmu_phone_to_index.cpkl'
 
-max_word_size = 20
+max_word_size = 40
+max_pronunciation_size = 40
 
 def main():
     print 'Starting program'
@@ -23,9 +29,11 @@ def run_command_specified_from_command_line():
     # Run specified command (sys.argv[1])
     command = sys.argv[1]
     if command == 'extract_dataset':
-        np_words, np_pronunciations = extract_CMU_dataset(max_word_size=max_word_size)
-        save_numpy_array(np_words, 'cmu_words.npy')
-        save_numpy_array(np_pronunciations, 'cmu_pronunciations.npy')
+        np_words, np_pronunciations, char_to_index, phone_to_index = extract_CMU_dataset(max_word_size=max_word_size)
+        save_numpy_array(np_words, word_output)
+        save_numpy_array(np_pronunciations, pronunciation_output)
+        save_pickle_file(char_to_index, char_to_index_output)
+        save_pickle_file(phone_to_index, phone_to_index_output)
     elif command == 'train':
         train_model()
     elif command == 'help':
@@ -44,12 +52,20 @@ def change_program_parameters_with_command_line_arguments():
         if arg.startswith('-'):
             if arg == '-max_word_size':
                 data = sys.argv[i+1]
-                print 'Got here'
                 global max_word_size 
                 max_word_size = int(data)
+            if arg == '-max_pronunciation_size':
+                data = sys.argv[i+1]
+                global max_pronunciation_size
+                max_pronunciation_size = int(data)
 
 def save_numpy_array(np_array, filename):
     print 'Saving numpy array as %s' % filename
+    np.save(filename, np_array)
+    
+def save_pickle_file(object, filename):
+    print 'Saving object as %s' % filename
+    pickle.dump(object, open(filename, 'wb'))
 
 def print_help_info():
     print 'No help info for you'
@@ -57,18 +73,100 @@ def print_help_info():
 def extract_CMU_dataset(max_word_size=20):
     print 'Extracting dataset from %s and %s' % (CMU_datafile, CMU_symbols)
     char_to_index = build_character_vocabulary_from_CMU()
-    phoneme_to_index = build_phoneme_vocabulary_from_CMU()
+    print char_to_index
     
-    return [1, 2, 3], [4, 5, 6]
+    phone_to_index = build_phoneme_vocabulary_from_CMU()
+    print phone_to_index
     
-#     with open(CMU_datafile) as f:
-#         for line in f:
-#             print line,
+    num_pairs = get_number_of_word_pronunciation_pairs()
+    print 'Number of word-pronunciation pairs: %s' % num_pairs
+    
+    np_words, np_pronunciations = extract_CMU_words_and_pronunciations_in_index_format(char_to_index, phone_to_index, num_pairs)
+    print np_words
+    print np_pronunciations
+    
+    return np_words, np_pronunciations, char_to_index, phone_to_index
+    
 def build_character_vocabulary_from_CMU():
+    '''Runs through all lines and builds a vocabulary over
+    all characters present in the dataset. Maps each character
+    to a unique index. All lines that start with a ; are ignored; they are comments.'''
     print 'Building character vocabulary'
+    characters = []
+    characters.append('')
+    with open(CMU_datafile) as f:
+        for line in f:
+            if line[0] != ';': # All lines with ; are comments, ignore them
+                word, pronunciation = extract_word_and_pronunciation_from_line(line)
+                for char in word:
+                    if char != '\n':
+                        if char not in characters:
+                            characters.append(char)
+    char_to_index = {}
+    for i in range(len(characters)):
+        char_to_index[characters[i]] = i
+    return char_to_index
+
+def get_number_of_word_pronunciation_pairs():
+    '''Counts the number of word pronunciation pairs.'''
+    num_pairs = 0
+    with open(CMU_datafile) as f:
+        for line in f:
+            if line[0] != ';': # All lines with ; are comments
+                # Valid pair. Count this one.
+                num_pairs += 1
+    return num_pairs
     
 def build_phoneme_vocabulary_from_CMU():
+    '''Runs through all lines in the symbols list
+    and associates each phoneme with an index.'''
     print 'Building phoneme vocabulary'
+    phonemes = []
+    with open(CMU_symbols) as f:
+        for line in f:
+            phonemes.append(line[:-1])
+    phone_to_index = {}
+    for i in range(len(phonemes)):
+        phone_to_index[phonemes[i]] = i
+    return phone_to_index
+
+def extract_CMU_words_and_pronunciations_in_index_format(char_to_index, phone_to_index, num_pairs):
+    '''Returns a numpy array of words and a numpy array of pronunciations. Each word
+    is a numpy row of indices, each index mapped to a character using char_to_index. Each pronunciation is
+    a numpy row of indices, each index mapped to a phoneme using phone_to_index.'''
+    print 'Extracting words and their pronunciations as separate numpy arrays'
+    np_words = np.zeros([num_pairs, max_word_size])
+    np_pronunciations = np.zeros([num_pairs, max_pronunciation_size])
+    with open(CMU_datafile) as f:
+        counter = 0
+        for line in f:
+            if line[0] != ';': # All lines with ; are comments, ignore them.
+                word, pronunciation = extract_word_and_pronunciation_from_line(line)
+                for i in range(len(word)):
+                    if i < max_word_size:
+                        np_words[counter, i] = char_to_index[word[i]] # Convert character to index and store in array.
+                for i in range(len(pronunciation)):
+                    if i < max_pronunciation_size:
+                        np_pronunciations[counter, i] = phone_to_index[pronunciation[i]]
+                counter += 1
+    return np_words, np_pronunciations
+
+def extract_word_and_pronunciation_from_line(line):
+    '''Extracts a word and a pronunciation from each line. Each word is a string
+    and each pronunciation is a list of phonemes. All instances of (*) are removed 
+    to include multiple spellings for the same word. In the dataset, all symbols
+    include a spelling afterwards. These spellings are ignored. Returns the word
+    and the pronunciation. Example "hello", ["H","AE1","L","OH"] '''
+    first_char = line[0]
+    line_split = line[:-1].split(' ')
+    word = line_split[0]
+    pronunciation = line_split[2:]
+    if not first_char.isalpha() and first_char != "'": # If not alpha, then it is a special character
+        word = first_char
+    paren_index = word.find('(') # Remove (*) ending of words with more than one pronunciation
+    if paren_index > 0:
+        word = word[:paren_index]
+    return word, pronunciation
 
 def train_model():
     print 'Training model'
