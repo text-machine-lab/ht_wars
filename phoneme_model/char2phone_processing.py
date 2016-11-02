@@ -155,7 +155,13 @@ def extract_CMU_words_and_pronunciations_in_index_format(char_to_index, phone_to
                     if i < max_pronunciation_size:
                         np_pronunciations[counter, i] = phone_to_index[pronunciation[i]]
                 counter += 1
-    return np_words, np_pronunciations
+    # Shuffle.
+    np_word_phone_pairs = np.concatenate([np_words, np_pronunciations], axis=1)
+    np.random.shuffle(np_word_phone_pairs)
+    np_words_shuffled = np_word_phone_pairs[:,:max_word_size]
+    np_pronunciations_shuffled = np_word_phone_pairs[:,max_word_size:max_word_size+max_pronunciation_size]
+    
+    return np_words_shuffled, np_pronunciations_shuffled
 
 def extract_word_and_pronunciation_from_line(line):
     '''Extracts a word and a pronunciation from each line. Each word is a string
