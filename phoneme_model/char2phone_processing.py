@@ -18,8 +18,9 @@ pronunciation_output = 'cmu_pronunciations.npy'
 char_to_index_output = 'cmu_char_to_index.cpkl'
 phone_to_index_output = 'cmu_phone_to_index.cpkl'
 
-max_word_size = 40
-max_pronunciation_size = 40
+max_word_size = 20
+max_pronunciation_size = 20
+
 
 def main():
     print 'Starting program'
@@ -27,6 +28,7 @@ def main():
     run_command_specified_from_command_line()
     print_word_pronunciation_pairs_from_file()
     print 'Done!'
+
 
 def run_command_specified_from_command_line():
     # Run specified command (sys.argv[1])
@@ -41,7 +43,8 @@ def run_command_specified_from_command_line():
         train_model()
     elif command == 'help':
         print_help_info()
-    
+
+
 def change_program_parameters_with_command_line_arguments():
     # Make sure user entered a command
     if len(sys.argv) < 2:
@@ -62,24 +65,28 @@ def change_program_parameters_with_command_line_arguments():
                 global max_pronunciation_size
                 max_pronunciation_size = int(data)
 
+
 def save_numpy_array(np_array, filename):
     print 'Saving numpy array as %s' % filename
     np.save(filename, np_array)
-    
+
+
 def save_pickle_file(object, filename):
     print 'Saving object as %s' % filename
     pickle.dump(object, open(filename, 'wb'))
 
+
 def print_help_info():
     print 'No help info for you'
-    
+
+
 def extract_CMU_dataset(max_word_size=20):
     print 'Extracting dataset from %s and %s' % (CMU_datafile, CMU_symbols)
-    char_to_index = build_character_vocabulary_from_CMU()
+    char_to_index = build_character_vocabulary_from_cmu()
     print 'Size of character vocabulary: %s' % len(char_to_index)
     print char_to_index
     
-    phone_to_index = build_phoneme_vocabulary_from_CMU()
+    phone_to_index = build_phoneme_vocabulary_from_cmu()
     print 'Size of phoneme vocabulary: %s' % len(phone_to_index)
     print phone_to_index
     
@@ -91,8 +98,9 @@ def extract_CMU_dataset(max_word_size=20):
     print np_pronunciations
     
     return np_words, np_pronunciations, char_to_index, phone_to_index
-    
-def build_character_vocabulary_from_CMU():
+
+
+def build_character_vocabulary_from_cmu():
     '''Runs through all lines and builds a vocabulary over
     all characters present in the dataset. Maps each character
     to a unique index. All lines that start with a ; are ignored; they are comments.'''
@@ -112,6 +120,7 @@ def build_character_vocabulary_from_CMU():
         char_to_index[characters[i]] = i
     return char_to_index
 
+
 def get_number_of_word_pronunciation_pairs():
     '''Counts the number of word pronunciation pairs.'''
     num_pairs = 0
@@ -121,8 +130,9 @@ def get_number_of_word_pronunciation_pairs():
                 # Valid pair. Count this one.
                 num_pairs += 1
     return num_pairs
-    
-def build_phoneme_vocabulary_from_CMU():
+
+
+def build_phoneme_vocabulary_from_cmu():
     '''Runs through all lines in the symbols list
     and associates each phoneme with an index.'''
     print 'Building phoneme vocabulary'
@@ -135,6 +145,7 @@ def build_phoneme_vocabulary_from_CMU():
     for i in range(len(phonemes)):
         phone_to_index[phonemes[i]] = i
     return phone_to_index
+
 
 def extract_CMU_words_and_pronunciations_in_index_format(char_to_index, phone_to_index, num_pairs):
     '''Returns a numpy array of words and a numpy array of pronunciations. Each word
@@ -163,6 +174,7 @@ def extract_CMU_words_and_pronunciations_in_index_format(char_to_index, phone_to
     
     return np_words_shuffled, np_pronunciations_shuffled
 
+
 def extract_word_and_pronunciation_from_line(line):
     '''Extracts a word and a pronunciation from each line. Each word is a string
     and each pronunciation is a list of phonemes. All instances of (*) are removed 
@@ -179,6 +191,7 @@ def extract_word_and_pronunciation_from_line(line):
     if paren_index > 0:
         word = word[:paren_index]
     return word, pronunciation
+
 
 def print_word_pronunciation_pairs_from_file():
     '''This program opens the file, runs through each valid
@@ -203,7 +216,8 @@ def print_word_pronunciation_pairs_from_file():
 #         for line in f:
 #             if line[0] != ';': # All lines with ; are comments, ignore them.
 #                 word, pronunciation = extract_word_and_pronunciation_from_line(line)
-    
+
+
 def train_model():
     print 'Training model'
 

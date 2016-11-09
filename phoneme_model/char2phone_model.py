@@ -19,36 +19,84 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
 
 # Model parameters.
-char_emb_dim = 10
-lstm_dim = 50
+char_emb_dim = 30
+lstm_dim = 400
 batch_size = 100
 training_fraction = .6
-learning_rate = 0.001
-n_epochs = 3
+learning_rate = 0.0005
+n_epochs = 30
+
 
 def main():
     print 'Starting program'
     '''Here we load the phoneme dataset from file, train a pronunciation model and use it to pronounce new words.'''
     # Load dataset from file and split training and testing.
-    np_words, np_pronunciations, char_to_index, phone_to_index = import_words_and_pronunciations_from_files(word_output, pronunciation_output)
+    np_words, np_pronunciations, char_to_index, phone_to_index = \
+        import_words_and_pronunciations_from_files(word_output, pronunciation_output)
+    index_to_char = invert_dictionary(char_to_index)
+    index_to_phone = invert_dictionary(phone_to_index)
+
     np_training_words = np_words[:np_words.shape[0] * training_fraction]
     np_training_pronunciations = np_pronunciations[:np_pronunciations.shape[0] * training_fraction]
     np_testing_words = np_words[np_words.shape[0] * training_fraction:]
     np_testing_pronunciations = np_pronunciations[np_pronunciations.shape[0] * training_fraction:]
     print 'Training set size: %s' % np_training_words.shape[0]
-    
+
+    # Code for testing that training and testing sets are disjoint. Takes too long to run.
+    # for i in range(np_training_pronunciations.shape[0]):
+    #     for j in range(np_testing_pronunciations.shape[0]):
+    #         np_training_pronunciation = np_training_pronunciations[i,:]
+    #         np_testing_pronunciation = np_testing_pronunciations[j,:]
+    #         same_phonemes = (np_training_pronunciation == np_testing_pronunciation)
+    #         same_pronunciation = np.mean(same_phonemes)
+    #         np_training_word = np_training_words[i,:]
+    #         np_testing_word = np_testing_words[j,:]
+    #         same_characters = (np_training_word == np_testing_word)
+    #         same_word = np.mean(same_characters)
+    #         if same_pronunciation == 1 and same_word == 1:
+    #             print 'Same word found in training and testing!'
+    #             print np_training_pronunciation
+    #             print np_testing_pronunciation
+    #             print np_training_word
+    #             print np_testing_word
+    #             print same_pronunciation
+    #             print same_phonemes
+    #             print same_characters
+    #             print same_word
     
     model_inputs, model_outputs = build_model(len(char_to_index), len(phone_to_index))
     training_inputs, training_outputs = build_trainer(model_inputs, model_outputs)
     create_tensorboard_visualization()
-    train_model(model_inputs, model_outputs, training_inputs, training_outputs, np_training_words, np_training_pronunciations)
-    evaluate_model_performance_on_test_set(model_inputs, model_outputs, np_testing_words, np_testing_pronunciations)
-    
+    sess = train_model(model_inputs,
+                       model_outputs,
+                       training_inputs,
+                       training_outputs,
+                       np_training_words,
+                       np_training_pronunciations)
+    np_testing_predictions, accuracy = evaluate_model_performance_on_test_set(model_inputs,
+                                                                              model_outputs,
+                                                                              np_testing_words,
+                                                                              np_testing_pronunciations,
+                                                                              sess=sess)
+    print 'Model test accuracy: %s' % accuracy
+    num_examples_to_print = 100
+    print_phoneme_label_prediction_pairs(np_testing_words[:num_examples_to_print],
+                                         np_testing_predictions[:num_examples_to_print],
+                                         np_testing_pronunciations[:num_examples_to_print],
+                                         index_to_char,
+                                         index_to_phone)
+
+def invert_dictionary(dictionary):
+    inv_dictionary = {v: k for k, v in dictionary.iteritems()}
+    return inv_dictionary
+
+
 def create_tensorboard_visualization():
     print 'Creating Tensorboard visualization'
     writer = tf.train.SummaryWriter("/tmp/c2p_model/")
     writer.add_graph(tf.get_default_graph())
-    
+
+
 def build_model(char_vocab_size, phone_vocab_size):
     '''Here we build a model that takes in a series of characters and outputs a series of phonemes.
     The model, once trained, can pronounce words.'''
@@ -71,6 +119,12 @@ def build_model(char_vocab_size, phone_vocab_size):
                 if i > 0:
                     lstm_scope.reuse_variables()
                 lstm_output, lstm_hidden_state = lstm(tf_char_embedding, lstm_hidden_state)
+        # Run encoder output through dense layer to process output
+        tf_encoder_output_W = tf.Variable(tf.random_normal([lstm_dim, lstm_dim]), name='encoder_output_emb')
+        tf_encoder_output_b = tf.Variable(tf.random_normal([lstm_dim]), name='encoder_output_b')
+        lstm_first_hidden_state = tf.matmul(lstm_hidden_state[0], tf_encoder_output_W) + tf_encoder_output_b
+        lstm_second_hidden_state = tf.matmul(lstm_hidden_state[1], tf_encoder_output_W) + tf_encoder_output_b
+        lstm_hidden_state = (lstm_first_hidden_state, lstm_second_hidden_state)
         # Use hidden state of character encoding stage (this is the phoneme embedding) to predict phonemes.
         phonemes = []
         tf_phone_pred_W = tf.Variable(tf.random_normal([lstm.output_size, phone_vocab_size]), name='phoneme_prediction_emb')
@@ -100,7 +154,8 @@ def build_trainer(model_inputs, model_outputs):
     tf_cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(tf_phonemes, tf_labels, name='loss')
     tf_loss = tf.reduce_sum(tf_cross_entropy) / tf.cast(tf_batch_size, tf.float32)
     return [tf_labels], [tf_loss]
-    
+
+
 def train_model(model_inputs, model_outputs, training_inputs, training_outputs, np_words, np_pronunciations):
     print 'Training model'
     tf_words = model_inputs[0]
@@ -132,13 +187,13 @@ def train_model(model_inputs, model_outputs, training_inputs, training_outputs, 
             _, loss, np_batch_phonemes = sess.run([train_op, tf_loss, tf_phonemes], feed_dict={tf_words:np_word_batch,tf_batch_size:current_batch_size, tf_labels:np_pronunciation_batch})
             # Model outputs a probability distribution over all phonemes. Collapse this distribution to get the predicted phoneme.
             np_batch_phoneme_predictions = np.argmax(np_batch_phonemes,axis=2)
-            accuracy = np.mean(np_batch_phoneme_predictions == np_pronunciation_batch)
+            accuracy = calculate_accuracy(np_batch_phoneme_predictions, np_pronunciation_batch)
             if i%10 == 0:
                 print 'Loss: %s, Accuracy: %s' % (loss, accuracy)
-                print np_batch_phoneme_predictions[0,:]
-                print np_pronunciation_batch[0,:]
             starting_training_example += current_batch_size
-    
+    return sess
+
+
 def evaluate_model_performance_on_test_set(model_inputs, model_outputs, np_words, np_pronunciations, sess=None):
     if sess == None:
         # Start a session to run model in gpu.
@@ -170,9 +225,6 @@ def evaluate_model_performance_on_test_set(model_inputs, model_outputs, np_words
         np_batch_phonemes = sess.run(tf_phonemes, feed_dict = {tf_words:np_word_batch,tf_batch_size:current_batch_size})
         # Model outputs a probability distribution over all phonemes. Collapse this distribution to get the predicted phoneme.
         np_batch_phoneme_predictions = np.argmax(np_batch_phonemes,axis=2)
-        if i%10 == 0:
-            print np_batch_phoneme_predictions
-            print np_pronunciation_batch
         # Append batch pronunciation predictions to list of all pronunciations predicted in this session.
         np_all_phoneme_batches.append(np_batch_phoneme_predictions)
         # Update starting training example for next batch.
@@ -183,10 +235,10 @@ def evaluate_model_performance_on_test_set(model_inputs, model_outputs, np_words
     print np_phoneme_predictions.shape
     print np_pronunciations.shape
     # Calculate acurracy as the average fraction of phonemes model got correct.
-    accuracy = np.mean(np_phoneme_predictions == np_pronunciations)
-    print accuracy
-    print 'Evaluating model'
-    
+    accuracy = calculate_accuracy(np_phoneme_predictions, np_pronunciations)
+    return np_phoneme_predictions, accuracy
+
+
 def import_words_and_pronunciations_from_files(word_file, pronunciation_file):
     np_words = np.load(word_output)
     np_pronunciations = np.load(pronunciation_output)
@@ -195,9 +247,29 @@ def import_words_and_pronunciations_from_files(word_file, pronunciation_file):
     return np_words, np_pronunciations, char_to_index, phone_to_index
 
 
+def calculate_accuracy(np_predictions, np_labels):
+    """This function calculates accuracy between a set of predictions
+    and a set of labels. This function does not include matches where
+    the prediction is zero!"""
+    #Get an array representing all matches between predictions and labels.
+    np_matches = (np_predictions == np_labels)
+    np_non_zeros = (np_predictions != 0)
+    np_non_zero_matches = np_matches * np_non_zeros
+    accuracy = np.sum(np_non_zero_matches, dtype=float) / np.sum(np_non_zeros, dtype=float)
+    return accuracy
 
 
-
+def print_phoneme_label_prediction_pairs(np_words, np_predictions, np_labels, index_to_char, index_to_phone):
+    """This function prints a series of word, prediction, true pronunciation pairs to test the model's performance."""
+    print 'Printing pairs...'
+    for i in range(np_predictions.shape[0]):
+        np_word = np_words[i,:]
+        np_prediction = np_predictions[i,:]
+        np_label = np_labels[i,:]
+        word = ''.join([index_to_char[np_word[j]] for j in range(max_word_size)])
+        prediction = ' '.join([index_to_phone[np_prediction[j]] for j in range(max_pronunciation_size)])
+        label = ' '.join([index_to_phone[np_label[j]] for j in range(max_pronunciation_size)])
+        print word, ' | ', prediction, ' | ', label
 
 
 
