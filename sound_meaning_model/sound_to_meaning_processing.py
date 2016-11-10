@@ -1,0 +1,141 @@
+'''David Donahue 2016. This script is used to create a dataset for the sound-to-meaning model.
+It produces a matrix of phonetic embeddings for a sample of words in the GloVe corpus. It also
+produces a matrix of GloVe embeddings for those words. The same index on both matrices indicates
+a pronunciation-meaning pair, where the phonetic embedding is used to pronounce the word and the
+GloVe embedding infers the word's meaning. The dataset produced by this script will be used to
+train a sound-to-meaning model, capable of approximating the meaning of a word by the way it sounds.'''
+
+import tensorflow as tf
+import numpy as np
+import imp
+
+char2phone_processing_path = '../phoneme_model/char2phone_processing.py'
+char2phone_processing = imp.load_source('char2phone_processing', char2phone_processing_path)
+
+from char2phone_processing import word_output
+from char2phone_processing import pronunciation_output
+
+char2phone_model_path = '../phoneme_model/char2phone_model.py'
+char2phone_model = imp.load_source('char2phone_model', char2phone_model_path)
+
+from char2phone_model import model_path
+
+gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
+
+glove_file_path = './glove.twitter.27B/glove.twitter.27B.200d.txt'
+char2phone_dir = '../phoneme_model/'
+
+
+def main():
+    words, glove_embs = extract_words_and_embs_from_glove_corpus()
+    phonetic_embs = generate_phonetic_embs_from_words(words)
+    save_dataset(words, phonetic_embs, glove_embs)
+
+
+def extract_words_and_embs_from_glove_corpus(sample_size=100000):
+    print 'Extracting words and GloVe embeddings from corpus'
+    '''Reads through each line in the GloVe datafile. Extracts sample_size
+    words and their corresponding GloVe vectors. Does save words containing
+    symbols.'''
+    glove_words = []
+    glove_embeddings = []
+
+    # Read through all lines. Example line in GloVe file:
+    # crocodiles 0.11604 0.5333 0.45436 -0.09288 -0.25571 1.0824 -0.13401...
+    # So each line is a word and 200 numbers representing a GloVe embedding.
+    with open(glove_file_path) as f:
+        number_of_glove_words_extracted = 0
+        for line_of_text in f:
+            line_tokens = line_of_text.split(' ')
+            glove_word = line_tokens[0]
+            glove_embedding = [float(i) for i in line_tokens[1:]]
+            np_glove_embedding = np.array(glove_embedding, dtype=float)
+            if glove_word[0].isalpha():
+                if number_of_glove_words_extracted >= sample_size:
+                    break
+                glove_words.append(line_tokens[0])
+                glove_embeddings.append(np_glove_embedding)
+                number_of_glove_words_extracted += 1
+
+    np_glove_embeddings = np.vstack(glove_embeddings)
+    print np_glove_embeddings
+    print 'Number of GloVe words/embeddings extracted: %s' % len(glove_words)
+    print 'Glove embeddings dimensionality: %s' % str(np_glove_embeddings.shape)
+    print 'Example GloVe words extracted: %s' % str(glove_words[200:210])
+    return [glove_words, np_glove_embeddings]
+
+
+def generate_phonetic_embs_from_words(words):
+    '''Generates a phonetic embedding for each word using the pretrained char2phone model.'''
+    print 'Generating phonetic embeddings for GloVe words'
+    _, _, char_to_index, phone_to_index = \
+        char2phone_model.import_words_and_pronunciations_from_files(dir_path=char2phone_dir)
+    character_vocab_size = len(char_to_index)
+    phoneme_vocab_size = len(phone_to_index)
+    model_inputs, model_outputs = char2phone_model.build_model(character_vocab_size, phoneme_vocab_size)
+    [tf_words, tf_batch_size] = model_inputs
+    [tf_phonemes, lstm_hidden_state] = model_outputs
+    tf_phonetic_emb = tf.concat(1, lstm_hidden_state)
+
+    np_word_indices = convert_words_to_indices(words, char_to_index)
+    print np_word_indices
+    # Prove words converted to indices correctly by reversing the process and printing.
+    index_to_char = char2phone_model.invert_dictionary(char_to_index)
+    print 'Example GloVe words recreated from indices:'
+    for i in range(130, 140):
+        np_word = np_word_indices[i, :]
+        char_list = []
+        for j in np_word:
+            if j in index_to_char:
+                char_list.append(index_to_char[j])
+        word = ''.join(char_list)
+        print word,
+    print
+
+    sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
+    saver = tf.train.Saver(max_to_keep=10)
+    # Restore model from previous save.
+    ckpt = tf.train.get_checkpoint_state(char2phone_dir + model_path)
+    if ckpt and ckpt.model_checkpoint_path:
+        saver.restore(sess, ckpt.model_checkpoint_path)
+    else:
+        print("No checkpoint found!")
+        return -1
+
+    np_phonetic_emb = sess.run(tf_phonetic_emb, feed_dict={tf_words: np_word_indices,
+                                                           tf_batch_size: len(words),})
+
+    print np_phonetic_emb.shape
+
+    return [[7, 6, 5, 4, 3, 2, 1]]
+
+
+def convert_words_to_indices(words, char_to_index, max_word_size=20):
+    m = len(words)
+    # Convert all words to indices using char_to_index dictionary.
+    np_word_indices = np.zeros([m, max_word_size], dtype=float)
+    for word_index in range(m):
+        word = words[word_index]
+        for char_index in range(len(word)):
+            if char_index < max_word_size:
+                char = word[char_index]
+                if char in char_to_index:
+                    np_word_indices[word_index, char_index] = char_to_index[char]
+    return np_word_indices
+
+def save_dataset(words, phonetic_embs, glove_embs):
+    print "Saying I'll save everything but not really doing it"
+
+
+
+
+
+
+
+
+
+
+
+if __name__ == '__main__':
+    print 'Starting program'
+    main()

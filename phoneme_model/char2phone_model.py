@@ -19,12 +19,13 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
 
 # Model parameters.
+model_path = 'saved_models'
 char_emb_dim = 30
 lstm_dim = 400
 batch_size = 100
 training_fraction = .6
-learning_rate = 0.0005
-n_epochs = 30
+learning_rate = 0.001
+n_epochs = 5
 
 
 def main():
@@ -32,7 +33,7 @@ def main():
     '''Here we load the phoneme dataset from file, train a pronunciation model and use it to pronounce new words.'''
     # Load dataset from file and split training and testing.
     np_words, np_pronunciations, char_to_index, phone_to_index = \
-        import_words_and_pronunciations_from_files(word_output, pronunciation_output)
+        import_words_and_pronunciations_from_files()
     index_to_char = invert_dictionary(char_to_index)
     index_to_phone = invert_dictionary(phone_to_index)
 
@@ -122,8 +123,8 @@ def build_model(char_vocab_size, phone_vocab_size):
         # Run encoder output through dense layer to process output
         tf_encoder_output_W = tf.Variable(tf.random_normal([lstm_dim, lstm_dim]), name='encoder_output_emb')
         tf_encoder_output_b = tf.Variable(tf.random_normal([lstm_dim]), name='encoder_output_b')
-        lstm_first_hidden_state = tf.matmul(lstm_hidden_state[0], tf_encoder_output_W) + tf_encoder_output_b
-        lstm_second_hidden_state = tf.matmul(lstm_hidden_state[1], tf_encoder_output_W) + tf_encoder_output_b
+        lstm_first_hidden_state = tf.nn.relu(tf.matmul(lstm_hidden_state[0], tf_encoder_output_W) + tf_encoder_output_b)
+        lstm_second_hidden_state = tf.nn.relu(tf.matmul(lstm_hidden_state[1], tf_encoder_output_W) + tf_encoder_output_b)
         lstm_hidden_state = (lstm_first_hidden_state, lstm_second_hidden_state)
         # Use hidden state of character encoding stage (this is the phoneme embedding) to predict phonemes.
         phonemes = []
@@ -143,7 +144,7 @@ def build_model(char_vocab_size, phone_vocab_size):
     for model_variable in model_variables:
         print ' - ',model_variable.name
     
-    return [tf_words, tf_batch_size], [tf_phonemes]
+    return [tf_words, tf_batch_size], [tf_phonemes, lstm_hidden_state]
     
 
 def build_trainer(model_inputs, model_outputs):
@@ -158,21 +159,28 @@ def build_trainer(model_inputs, model_outputs):
 
 def train_model(model_inputs, model_outputs, training_inputs, training_outputs, np_words, np_pronunciations):
     print 'Training model'
+    if not os.path.exists(model_path):
+        os.makedirs(model_path)
+    # Extract tf variables.
     tf_words = model_inputs[0]
     tf_batch_size = model_inputs[1]
     tf_loss = training_outputs[0]
     tf_phonemes = model_outputs[0]
-    print tf_loss.get_shape()
     tf_labels = training_inputs[0]
+
+    with tf.name_scope("SAVER"):
+        saver = tf.train.Saver(max_to_keep=10)
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(tf_loss)
     sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
     sess.run(tf.initialize_all_variables())
     current_batch_size = batch_size
     for epoch in range(n_epochs):
+        print 'Epoch %s' % epoch
         # Use these parameters to keep track of batch size and start location.
         starting_training_example = 0
         num_batches = np_words.shape[0] / batch_size
         remaining_batch_size = np_words.shape[0] % batch_size
+        batch_accuracies = []
         for i in range(num_batches+1):
             # If we are on the last batch, we are running leftover examples. Otherwise, we stick to global batch_size.
             if i == num_batches:
@@ -184,13 +192,21 @@ def train_model(model_inputs, model_outputs, training_inputs, training_outputs, 
             # Extract a batch of pronunciations of size current_batch_size.
             np_pronunciation_batch = np_pronunciations[starting_training_example:starting_training_example+current_batch_size]
             # Calculate the predicted phonemes for the word batch using the model.
-            _, loss, np_batch_phonemes = sess.run([train_op, tf_loss, tf_phonemes], feed_dict={tf_words:np_word_batch,tf_batch_size:current_batch_size, tf_labels:np_pronunciation_batch})
-            # Model outputs a probability distribution over all phonemes. Collapse this distribution to get the predicted phoneme.
+            _, loss, np_batch_phonemes = sess.run([train_op, tf_loss, tf_phonemes],
+                                                  feed_dict={tf_words: np_word_batch,
+                                                             tf_batch_size: current_batch_size,
+                                                             tf_labels: np_pronunciation_batch})
+            # Model outputs a probability distribution over all phonemes.
+            # Collapse this distribution to get the predicted phoneme.
             np_batch_phoneme_predictions = np.argmax(np_batch_phonemes,axis=2)
             accuracy = calculate_accuracy(np_batch_phoneme_predictions, np_pronunciation_batch)
-            if i%10 == 0:
-                print 'Loss: %s, Accuracy: %s' % (loss, accuracy)
+            batch_accuracies.append(accuracy)
             starting_training_example += current_batch_size
+        average_epoch_training_accuracy = sum(batch_accuracies) / len(batch_accuracies)
+        print 'Epoch accuracy: %s' % average_epoch_training_accuracy
+        print 'Saving model %s' % epoch
+        print
+        saver.save(sess, os.path.join(model_path, 'c2p-model'), global_step=epoch)
     return sess
 
 
@@ -239,11 +255,11 @@ def evaluate_model_performance_on_test_set(model_inputs, model_outputs, np_words
     return np_phoneme_predictions, accuracy
 
 
-def import_words_and_pronunciations_from_files(word_file, pronunciation_file):
-    np_words = np.load(word_output)
-    np_pronunciations = np.load(pronunciation_output)
-    char_to_index = pickle.load(open(char_to_index_output, 'rb'))
-    phone_to_index = pickle.load(open(phone_to_index_output, 'rb'))
+def import_words_and_pronunciations_from_files(dir_path=''):
+    np_words = np.load(dir_path + word_output)
+    np_pronunciations = np.load(dir_path + pronunciation_output)
+    char_to_index = pickle.load(open(dir_path + char_to_index_output, 'rb'))
+    phone_to_index = pickle.load(open(dir_path + phone_to_index_output, 'rb'))
     return np_words, np_pronunciations, char_to_index, phone_to_index
 
 

@@ -21,7 +21,6 @@ phone_to_index_output = 'cmu_phone_to_index.cpkl'
 max_word_size = 20
 max_pronunciation_size = 20
 
-
 def main():
     print 'Starting program'
     change_program_parameters_with_command_line_arguments()
@@ -174,7 +173,6 @@ def extract_CMU_words_and_pronunciations_in_index_format(char_to_index, phone_to
     
     return np_words_shuffled, np_pronunciations_shuffled
 
-
 def extract_word_and_pronunciation_from_line(line):
     '''Extracts a word and a pronunciation from each line. Each word is a string
     and each pronunciation is a list of phonemes. All instances of (*) are removed 
@@ -183,11 +181,11 @@ def extract_word_and_pronunciation_from_line(line):
     and the pronunciation. Example "hello", ["H","AE1","L","OH"] '''
     first_char = line[0]
     line_split = line[:-1].split(' ')
-    word = line_split[0]
+    word = line_split[0].lower()
     pronunciation = line_split[2:]
     if not first_char.isalpha() and first_char != "'": # If not alpha, then it is a special character
         word = first_char
-    paren_index = word.find('(') # Remove (*) ending of words with more than one pronunciation
+    paren_index = word.find('(')  # Remove (*) ending of words with more than one pronunciation
     if paren_index > 0:
         word = word[:paren_index]
     return word, pronunciation
@@ -211,12 +209,6 @@ def print_word_pronunciation_pairs_from_file():
         pronunciation = ' '.join([index_to_phone[np_pronunciation[j]] for j in range(max_pronunciation_size)])
         
         print word, pronunciation
-#     with open(CMU_datafile) as f:
-#         counter = 0
-#         for line in f:
-#             if line[0] != ';': # All lines with ; are comments, ignore them.
-#                 word, pronunciation = extract_word_and_pronunciation_from_line(line)
-
 
 def train_model():
     print 'Training model'
