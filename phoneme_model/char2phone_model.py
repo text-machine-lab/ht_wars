@@ -112,39 +112,46 @@ def build_model(char_vocab_size, phone_vocab_size):
         tf_word_char_embs = tf.nn.embedding_lookup(tf_char_emb, tf_words)
         # Insert each character one by one into an LSTM.
         lstm = tf.nn.rnn_cell.LSTMCell(num_units = lstm_dim, state_is_tuple=True)
-        lstm_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
+        encoder_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
         for i in range(max_word_size):
             tf_char_embedding = tf.nn.embedding_lookup(tf_char_emb, tf_words[:, i])
             
             with tf.variable_scope('LSTM_ENCODER') as lstm_scope:
                 if i > 0:
                     lstm_scope.reuse_variables()
-                lstm_output, lstm_hidden_state = lstm(tf_char_embedding, lstm_hidden_state)
+                encoder_output, encoder_hidden_state = lstm(tf_char_embedding, encoder_hidden_state)
         # Run encoder output through dense layer to process output
         tf_encoder_output_W = tf.Variable(tf.random_normal([lstm_dim, lstm_dim]), name='encoder_output_emb')
-        tf_encoder_output_b = tf.Variable(tf.random_normal([lstm_dim]), name='encoder_output_b')
-        lstm_first_hidden_state = tf.nn.relu(tf.matmul(lstm_hidden_state[0], tf_encoder_output_W) + tf_encoder_output_b)
-        lstm_second_hidden_state = tf.nn.relu(tf.matmul(lstm_hidden_state[1], tf_encoder_output_W) + tf_encoder_output_b)
-        lstm_hidden_state = (lstm_first_hidden_state, lstm_second_hidden_state)
+        tf_encoder_output_b = tf.Variable(tf.random_normal([lstm_dim]), name='encoder_output_bias')
+        encoder_output_emb = tf.matmul(encoder_output, tf_encoder_output_W) + tf_encoder_output_b
+
+        # lstm_first_hidden_state = tf.nn.relu(tf.matmul(lstm_hidden_state[0], tf_encoder_output_W) + tf_encoder_output_b)
+        # lstm_second_hidden_state = tf.nn.relu(tf.matmul(lstm_hidden_state[1], tf_encoder_output_W) + tf_encoder_output_b)
+        # lstm_hidden_state = (lstm_first_hidden_state, lstm_second_hidden_state)
+
+        decoder_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
+
         # Use hidden state of character encoding stage (this is the phoneme embedding) to predict phonemes.
         phonemes = []
-        tf_phone_pred_W = tf.Variable(tf.random_normal([lstm.output_size, phone_vocab_size]), name='phoneme_prediction_emb')
+        tf_phone_pred_w = tf.Variable(tf.random_normal([lstm.output_size, phone_vocab_size]), name='phoneme_prediction_emb')
         tf_phone_pred_b = tf.Variable(tf.random_normal([phone_vocab_size]), name='phoneme_prediction_bias')
         for j in range(max_pronunciation_size):
             with tf.variable_scope('LSTM_DECODER') as lstm_scope:
-                if j > 0:
+                if j == 0:
+                    decoder_output, decoder_hidden_state = lstm(encoder_output_emb, decoder_hidden_state)
+                else:
                     lstm_scope.reuse_variables()
-                output, lstm_hidden_state = lstm(tf.zeros([tf_batch_size, char_emb_dim]), lstm_hidden_state)
-                phoneme = tf.matmul(output, tf_phone_pred_W) + tf_phone_pred_b
+                    decoder_output, decoder_hidden_state = lstm(tf.zeros([tf_batch_size, lstm_dim]), decoder_hidden_state)
+                phoneme = tf.matmul(decoder_output, tf_phone_pred_w) + tf_phone_pred_b
                 phonemes.append(phoneme)
         tf_phonemes = tf.pack(phonemes, axis=1)
     # Print model variables.
     model_variables = tf.trainable_variables()
     print 'Model variables:'
-    for model_variable in model_variables:
-        print ' - ',model_variable.name
+    # for model_variable in model_variables:
+    #     print ' - ', model_variable.name
     
-    return [tf_words, tf_batch_size], [tf_phonemes, lstm_hidden_state]
+    return [tf_words, tf_batch_size], [tf_phonemes, encoder_output_emb]
     
 
 def build_trainer(model_inputs, model_outputs):
@@ -267,7 +274,7 @@ def calculate_accuracy(np_predictions, np_labels):
     """This function calculates accuracy between a set of predictions
     and a set of labels. This function does not include matches where
     the prediction is zero!"""
-    #Get an array representing all matches between predictions and labels.
+    # Get an array representing all matches between predictions and labels.
     np_matches = (np_predictions == np_labels)
     np_non_zeros = (np_predictions != 0)
     np_non_zero_matches = np_matches * np_non_zeros
