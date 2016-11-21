@@ -7,6 +7,7 @@ train a sound-to-meaning model, capable of approximating the meaning of a word b
 
 import tensorflow as tf
 import numpy as np
+import cPickle as pickle
 import imp
 
 char2phone_processing_path = '../phoneme_model/char2phone_processing.py'
@@ -25,14 +26,15 @@ gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
 glove_file_path = './glove.twitter.27B/glove.twitter.27B.200d.txt'
 char2phone_dir = '../phoneme_model/'
 
+num_glove_words_to_extract = 100000
 
 def main():
-    words, glove_embs = extract_words_and_embs_from_glove_corpus()
+    words, glove_embs = extract_words_and_embs_from_glove_corpus(sample_size=num_glove_words_to_extract)
     phonetic_embs = generate_phonetic_embs_from_words(words)
     save_dataset(words, phonetic_embs, glove_embs)
 
 
-def extract_words_and_embs_from_glove_corpus(sample_size=100000):
+def extract_words_and_embs_from_glove_corpus(start_reading_at_line=0, sample_size=100000):
     print 'Extracting words and GloVe embeddings from corpus'
     '''Reads through each line in the GloVe datafile. Extracts sample_size
     words and their corresponding GloVe vectors. Does save words containing
@@ -45,14 +47,17 @@ def extract_words_and_embs_from_glove_corpus(sample_size=100000):
     # So each line is a word and 200 numbers representing a GloVe embedding.
     with open(glove_file_path) as f:
         number_of_glove_words_extracted = 0
+        for line_index in range(start_reading_at_line):
+            f.next()
         for line_of_text in f:
             line_tokens = line_of_text.split(' ')
             glove_word = line_tokens[0]
             glove_embedding = [float(i) for i in line_tokens[1:]]
             np_glove_embedding = np.array(glove_embedding, dtype=float)
             if glove_word[0].isalpha():
-                if number_of_glove_words_extracted >= sample_size:
-                    break
+                if sample_size is not None:
+                    if number_of_glove_words_extracted >= sample_size:
+                        break
                 glove_words.append(line_tokens[0])
                 glove_embeddings.append(np_glove_embedding)
                 number_of_glove_words_extracted += 1
@@ -106,8 +111,9 @@ def generate_phonetic_embs_from_words(words):
                                                            tf_batch_size: len(words),})
 
     print np_phonetic_emb.shape
+    print np.mean(np.abs(np_phonetic_emb))
 
-    return [[7, 6, 5, 4, 3, 2, 1]]
+    return np_phonetic_emb
 
 
 def convert_words_to_indices(words, char_to_index, max_word_size=20):
@@ -123,9 +129,15 @@ def convert_words_to_indices(words, char_to_index, max_word_size=20):
                     np_word_indices[word_index, char_index] = char_to_index[char]
     return np_word_indices
 
-def save_dataset(words, phonetic_embs, glove_embs):
-    print "Saying I'll save everything but not really doing it"
 
+def save_dataset(words, phonetic_embs, glove_embs):
+    print "Saving glove_words.cpkl, glove_embs.npy, and phoneme_embs.npy!"
+    '''Save dataset as pickle files and numpy array files. Words will be saved
+    as glove_words.cpkl, the phonetic embeddings will be saved as phonetic_embs.npy,
+    and the glove embeddings will be saved as glove_embs.npy'''
+    np.save('phonetic_embs.npy', phonetic_embs)
+    np.save('glove_embs.npy', glove_embs)
+    pickle.dump(words, open('glove_words.cpkl', 'wb'))
 
 
 

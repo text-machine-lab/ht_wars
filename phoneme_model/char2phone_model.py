@@ -19,7 +19,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
 
 # Model parameters.
-model_path = 'saved_models'
+model_path = 'saved_models/'
 char_emb_dim = 30
 lstm_dim = 400
 batch_size = 100
@@ -243,10 +243,11 @@ def evaluate_model_performance_on_test_set(model_inputs, model_outputs, np_words
         # Extract a batch of words of size current_batch_size.
         np_word_batch = np_words[starting_training_example:starting_training_example+current_batch_size]
         # Extract a batch of pronunciations of size current_batch_size.
-        np_pronunciation_batch = np_pronunciations[starting_training_example:starting_training_example+current_batch_size]
+        np_pronunciation_batch = np_pronunciations[starting_training_example:starting_training_example + current_batch_size]
         # Calculate the predicted phonemes for the word batch using the model.
-        np_batch_phonemes = sess.run(tf_phonemes, feed_dict = {tf_words:np_word_batch,tf_batch_size:current_batch_size})
-        # Model outputs a probability distribution over all phonemes. Collapse this distribution to get the predicted phoneme.
+        np_batch_phonemes = sess.run(tf_phonemes, feed_dict={tf_words: np_word_batch, tf_batch_size: current_batch_size})
+        # Model outputs a probability distribution over all phonemes.
+        # Collapse this distribution to get the predicted phoneme.
         np_batch_phoneme_predictions = np.argmax(np_batch_phonemes,axis=2)
         # Append batch pronunciation predictions to list of all pronunciations predicted in this session.
         np_all_phoneme_batches.append(np_batch_phoneme_predictions)
