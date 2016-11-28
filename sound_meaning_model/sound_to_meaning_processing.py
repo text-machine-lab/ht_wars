@@ -9,6 +9,10 @@ import tensorflow as tf
 import numpy as np
 import cPickle as pickle
 import imp
+import sys
+
+sys.path.append('../')
+from config import WORD_VECTORS_FILE_PATH
 
 char2phone_processing_path = '../phoneme_model/char2phone_processing.py'
 char2phone_processing = imp.load_source('char2phone_processing', char2phone_processing_path)
@@ -23,7 +27,6 @@ from char2phone_model import model_path
 
 gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
 
-glove_file_path = './glove.twitter.27B/glove.twitter.27B.200d.txt'
 char2phone_dir = '../phoneme_model/'
 
 num_glove_words_to_extract = 100000
@@ -45,7 +48,7 @@ def extract_words_and_embs_from_glove_corpus(start_reading_at_line=0, sample_siz
     # Read through all lines. Example line in GloVe file:
     # crocodiles 0.11604 0.5333 0.45436 -0.09288 -0.25571 1.0824 -0.13401...
     # So each line is a word and 200 numbers representing a GloVe embedding.
-    with open(glove_file_path) as f:
+    with open(WORD_VECTORS_FILE_PATH) as f:
         number_of_glove_words_extracted = 0
         for line_index in range(start_reading_at_line):
             f.next()
@@ -123,10 +126,15 @@ def convert_words_to_indices(words, char_to_index, max_word_size=20):
     for word_index in range(m):
         word = words[word_index]
         for char_index in range(len(word)):
-            if char_index < max_word_size:
+            num_non_characters = 0
+            if char_index - num_non_characters < max_word_size:
                 char = word[char_index]
-                if char in char_to_index:
-                    np_word_indices[word_index, char_index] = char_to_index[char]
+                if char.isalpha():
+                    if char in char_to_index:
+                        np_word_indices[word_index, char_index - num_non_characters] = char_to_index[char]
+                else:
+                    num_non_characters += 1
+
     return np_word_indices
 
 

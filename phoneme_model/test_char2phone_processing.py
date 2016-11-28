@@ -2,8 +2,8 @@
 
 import numpy as np
 import cPickle as pickle
-from char2phone_processing import CMU_datafile
-from char2phone_processing import CMU_symbols
+from char2phone_processing import CMU_DICTIONARY_FILE_PATH
+from char2phone_processing import CMU_SYMBOLS_FILE_PATH
 from char2phone_processing import word_output
 from char2phone_processing import pronunciation_output
 from char2phone_processing import get_number_of_word_pronunciation_pairs

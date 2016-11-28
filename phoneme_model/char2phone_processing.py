@@ -10,8 +10,9 @@ import sys
 import cPickle as pickle
 from numpy import int64
 
-CMU_datafile = 'cmudict-0.7b.txt'
-CMU_symbols = 'cmudict-0.7b.symbols.txt'
+sys.path.append('../')
+from config import CMU_DICTIONARY_FILE_PATH
+from config import CMU_SYMBOLS_FILE_PATH
 
 word_output = 'cmu_words.npy'
 pronunciation_output = 'cmu_pronunciations.npy'
@@ -80,7 +81,7 @@ def print_help_info():
 
 
 def extract_CMU_dataset(max_word_size=20):
-    print 'Extracting dataset from %s and %s' % (CMU_datafile, CMU_symbols)
+    print 'Extracting dataset from %s and %s' % (CMU_DICTIONARY_FILE_PATH, CMU_SYMBOLS_FILE_PATH)
     char_to_index = build_character_vocabulary_from_cmu()
     print 'Size of character vocabulary: %s' % len(char_to_index)
     print char_to_index
@@ -106,7 +107,7 @@ def build_character_vocabulary_from_cmu():
     print 'Building character vocabulary'
     characters = []
     characters.append('')
-    with open(CMU_datafile) as f:
+    with open(CMU_DICTIONARY_FILE_PATH) as f:
         for line in f:
             if line[0].isalpha(): # All lines with ; are comments, ignore them
                 word, pronunciation = extract_word_and_pronunciation_from_line(line)
@@ -123,7 +124,7 @@ def build_character_vocabulary_from_cmu():
 def get_number_of_word_pronunciation_pairs():
     '''Counts the number of word pronunciation pairs.'''
     num_pairs = 0
-    with open(CMU_datafile) as f:
+    with open(CMU_DICTIONARY_FILE_PATH) as f:
         for line in f:
             if line[0].isalpha(): # All lines with ; are comments
                 # Valid pair. Count this one.
@@ -137,7 +138,7 @@ def build_phoneme_vocabulary_from_cmu():
     print 'Building phoneme vocabulary'
     phonemes = []
     phonemes.append('')
-    with open(CMU_symbols) as f:
+    with open(CMU_SYMBOLS_FILE_PATH) as f:
         for line in f:
             phonemes.append(line[:-1])
     phone_to_index = {}
@@ -153,7 +154,7 @@ def extract_CMU_words_and_pronunciations_in_index_format(char_to_index, phone_to
     print 'Extracting words and their pronunciations as separate numpy arrays'
     np_words = np.zeros([num_pairs, max_word_size], dtype=int64)
     np_pronunciations = np.zeros([num_pairs, max_pronunciation_size], dtype=int64)
-    with open(CMU_datafile) as f:
+    with open(CMU_DICTIONARY_FILE_PATH) as f:
         counter = 0
         for line in f:
             if line[0].isalpha(): # All lines with ; are comments, ignore them.

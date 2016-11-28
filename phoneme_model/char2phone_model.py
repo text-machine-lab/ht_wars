@@ -87,6 +87,7 @@ def main():
                                          index_to_char,
                                          index_to_phone)
 
+
 def invert_dictionary(dictionary):
     inv_dictionary = {v: k for k, v in dictionary.iteritems()}
     return inv_dictionary
