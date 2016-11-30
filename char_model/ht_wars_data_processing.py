@@ -22,8 +22,8 @@ import sys
 
 sys.path.append('../')
 from config import SEMEVAL_HUMOR_DIR
-
-output_dir = './numpy_tweet_pairs/'
+from config import HUMOR_TWEET_PAIR_DIR
+from config import CHAR_TO_INDEX_FILE_PATH
 
 def main():
     # Find hashtags, create character vocabulary, print dataset statistics, extract/format tweet pairs and save everything.
@@ -39,7 +39,7 @@ def main():
         np_tweet_pairs, np_tweet_pair_labels = format_tweet_pairs(data, char_to_index)
         save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag)
     print 'Saving char_to_index.cpkl containing character vocabulary'
-    pickle.dump(char_to_index, open('char_to_index.cpkl', 'wb'))
+    pickle.dump(char_to_index, open(CHAR_TO_INDEX_FILE_PATH, 'wb'))
     print "Done!"
      
 # def main():
@@ -204,11 +204,11 @@ def extract_tweet_pairs_from_file(hashtag_file):
 def save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag):
     print 'Saving data for hashtag %s' % hashtag
     # Create directories if they don't exist
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    if not os.path.exists(HUMOR_TWEET_PAIR_DIR):
+        os.makedirs(HUMOR_TWEET_PAIR_DIR)
     # Save hashtag tweet pair data into training or testing folders depending on training_hashtag
-    np.save(output_dir + hashtag + '_pairs.npy', np_tweet_pairs)
-    np.save(output_dir + hashtag + '_labels.npy', np_tweet_pair_labels)
+    np.save(HUMOR_TWEET_PAIR_DIR + hashtag + '_pairs.npy', np_tweet_pairs)
+    np.save(HUMOR_TWEET_PAIR_DIR + hashtag + '_labels.npy', np_tweet_pair_labels)
     
 ### Unit Tests ###
 def test_get_hashtag_file_names():
@@ -243,7 +243,7 @@ def test_reconstruct_tweets_from_file():
                             assert tweet in tweets
     
 def test_training_and_testing_sets_are_disjoint():
-    for (dirpath, dirnames, filenames) in walk(output_dir):
+    for (dirpath, dirnames, filenames) in walk(HUMOR_TWEET_PAIR_DIR):
         for (dirpath2, dirnames2, filenames2) in walk(test_output_dir):
             for filename in filenames:
                 for filename2 in filenames2:

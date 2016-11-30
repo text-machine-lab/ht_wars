@@ -16,13 +16,15 @@ from keras.layers.recurrent import LSTM
 from keras.utils import np_utils
 from keras import backend as K
 import cPickle as pickle
+from config import HUMOR_TWEET_PAIR_DIR
+from config import CHAR_TO_INDEX_FILE_PATH
+import gc
 
 tf.logging.set_verbosity(tf.logging.ERROR)
 
-# Training and testing data pulled from these directories.
-tweet_pairs_dir = './numpy_tweet_pairs/'
 
 TWEET_SIZE = 140
+
 
 def main():
     # User must enter 'train' or 'test' for the program to execute successfully.
@@ -37,11 +39,12 @@ def main():
         print 'Invalid arguments provided'
         print 'Usage: python ht_wars_char_model.py [train/test]'
 
+
 def train():
     '''Load all tweet pairs per all hashtags. Per hashtag, train on all other hashtags, test on current hashtag.
     Print out micro-accuracy each iteration and print out overall accuracy after.'''
     # Load training tweet pairs/labels, and train on them.
-    hashtag_datas, char_to_index, vocab_size = load_hashtag_data_and_vocabulary(tweet_pairs_dir)
+    hashtag_datas, char_to_index, vocab_size = load_hashtag_data_and_vocabulary(HUMOR_TWEET_PAIR_DIR, CHAR_TO_INDEX_FILE_PATH)
 #     all_tweet_pairs = np.concatenate([hashtag_datas[i][1] for i in range(len(hashtag_datas))])
 #     all_tweet_labels = np.concatenate([hashtag_datas[i][0] for i in range(len(hashtag_datas))])
     accuracies = []
@@ -61,11 +64,14 @@ def train():
         ht_model.train(np_other_tweet1, np_other_tweet2, np_other_tweet_labels)
         accuracy = ht_model.predict(np_hashtag_tweet1, np_hashtag_tweet2, np_hashtag_tweet_labels)
         accuracies.append(accuracy)
+        gc.collect()
     print 'Total Model Accuracy: %s' % np.mean(accuracies)
     print 'Done!'  
-    
+
+
 def test():
     print 'Done!'
+
 
 # Created Python class for model. This was not necessary because the Keras.io
 # interace is already organized this way.
@@ -129,7 +135,7 @@ class HashtagWarsCharacterModel:
         output = Dense(1, activation='sigmoid')(dense_layer1)
         model = Model(input=[tweet1, tweet2], output=[output])
         return model
-        
+
     def train(self, tweet1, tweet2, labels):
         '''Construct humor model, then train it on batches of tweet pairs.'''
         model = self.create_model()
@@ -149,7 +155,7 @@ class HashtagWarsCharacterModel:
             self.train_batch(model, tweet1, tweet2, labels, num_batches * batch_size, num_batches * batch_size + remaining_examples)
             
         print 'Finished training model'
-    
+
     def predict(self, tweet1, tweet2, labels):
         '''This function uses the pretrained model in this object to predict the funnier of tweet pairs
         tweet1 and tweet2, and calculates accuracy using the ground truth labels for each pair. The mean
@@ -176,7 +182,7 @@ class HashtagWarsCharacterModel:
         print 'Accuracy: %s' % mean_accuracy
         print
         return mean_accuracy
-        
+
     def predict_batch(self, model, tweet1, tweet2, labels, start_index, end_index):
         '''Predict which tweet is funnier for all tweet1 and tweet2 from start_index to end_index. Returns accuracy of prediction.
         Warning: end_index represents the index after the batch has ended. This is the default access format for numpy arrays.'''
@@ -188,7 +194,7 @@ class HashtagWarsCharacterModel:
         tweet_label_batch = labels[start_index:end_index]
         loss, accuracy = model.evaluate([tweet1_batch, tweet2_batch], tweet_label_batch, batch_size=tweet_label_batch.shape[0])
         return accuracy
-    
+
     def train_batch(self, model, tweet1, tweet2, labels, start_index, end_index):
         tweet1_batch = tweet1[start_index:end_index,:]
         
@@ -197,7 +203,8 @@ class HashtagWarsCharacterModel:
         tweet_labels_batch = labels[start_index:end_index]
 
         model.train_on_batch([tweet1_batch, tweet2_batch], [tweet_labels_batch])
-            
+
+
 def extract_hashtag_data_for_leave_one_out(hashtag_datas, i):
     '''This function takes an index i representing a particular hashtag.
     The hashtag name is returned, along with tweet pair/label data for both that hashtag and all other
@@ -223,13 +230,15 @@ def convert_tweets_to_one_hot(tweets, vocab_size):
     # Just converts to one-hot in a cheating way.
     tweets_one_hot = (np.arange(vocab_size) == tweets[:,:,None]-1).astype(int)
     return tweets_one_hot
-    
+
+
 def print_model_performance_statistics(tweet_labels, tweet_label_predictions):
     correct_predictions = np.equal(tweet_labels, tweet_label_predictions)
     accuracy = np.mean(correct_predictions)
     print('Model test accuracy: %s' % accuracy)
-    
-def load_hashtag_data_and_vocabulary(tweet_pairs_path):
+
+
+def load_hashtag_data_and_vocabulary(tweet_pairs_path, char_to_index_path):
     '''Load in tweet pairs per hashtag. Create a list of [hashtag_name, pairs, labels] entries.
     Return tweet pairs, tweet labels, char_to_index.cpkl and vocabulary size.'''
     hashtag_datas = []
@@ -240,7 +249,7 @@ def load_hashtag_data_and_vocabulary(tweet_pairs_path):
                 tweet_pairs = np.load(tweet_pairs_path + filename)
                 tweet_labels = np.load(tweet_pairs_path + hashtag_name + '_labels.npy')
                 hashtag_datas.append([hashtag_name, tweet_pairs, tweet_labels])
-    char_to_index = pickle.load(open('char_to_index.cpkl', 'rb'))
+    char_to_index = pickle.load(open(char_to_index_path, 'rb'))
     vocab_size = len(char_to_index)
     return hashtag_datas, char_to_index, vocab_size
     

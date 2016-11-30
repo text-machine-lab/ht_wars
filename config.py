@@ -12,4 +12,6 @@ WORD_VECTORS_FILE_PATH = os.path.join(DATA_DIR, 'glove.twitter.27B/glove.twitter
 SEMEVAL_HUMOR_DIR = os.path.join(DATA_DIR, 'train_dir/train_data/')
 CMU_SYMBOLS_FILE_PATH = os.path.join(DATA_DIR, 'cmudict-0.7b.symbols.txt')
 CMU_DICTIONARY_FILE_PATH = os.path.join(DATA_DIR, 'cmudict-0.7b.txt')
+HUMOR_TWEET_PAIR_DIR = os.path.join(DATA_DIR, 'numpy_tweet_pairs/')
+CHAR_TO_INDEX_FILE_PATH = os.path.join(DATA_DIR, 'char_to_index.cpkl')
 
