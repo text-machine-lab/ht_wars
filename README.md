@@ -33,6 +33,7 @@ DATA DOWNLOAD AND CREATION REQUIREMENTS:
 
 - Run 'python phoneme_model/char2phone_model.py' to train phoneme models. These models are saved in /data/char_2_phone_models/
 
-Once data is generated, all functions in tools.py and tf_tools.py should work. Relative paths from subfolders to datafiles can be found in config.py
+Once data is generated, all functions in tools.py and tf_tools.py should work. Relative paths from subfolders to datafiles can be found in config.py module.
+If names of external data change (possibly due to a new version, etc.). The paths in config.py can be changed locally before data creation begins.
 
 This README last updated: 1 December 2016
