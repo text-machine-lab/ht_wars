@@ -6,22 +6,25 @@ import tensorflow as tf
 import numpy as np
 import cPickle as pickle
 import os
-from char2phone_processing import max_word_size
-from char2phone_processing import max_pronunciation_size
-from char2phone_processing import word_output
-from char2phone_processing import pronunciation_output
-from char2phone_processing import char_to_index_output
-from char2phone_processing import phone_to_index_output
+from config import CMU_NP_WORDS_FILE_PATH
+from config import CMU_NP_PRONUNCIATIONS_FILE_PATH
+from char2phone_processing import CMU_CHAR_TO_INDEX_FILE_PATH
+from char2phone_processing import CMU_PHONE_TO_INDEX_FILE_PATH
+
+from config import CHAR_2_PHONE_MODEL_DIR
+from tf_tools import MAX_PRONUNCIATION_SIZE
+from tf_tools import MAX_WORD_SIZE
+from tf_tools import GPU_OPTIONS
+
+
+from tf_tools import build_chars_to_phonemes_model
+from tools import invert_dictionary
 
 # GPU configuration.
 os.environ['GLOG_minloglevel'] = '2'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
 
 # Model parameters.
-model_path = 'saved_models/'
-char_emb_dim = 30
-lstm_dim = 400
 batch_size = 100
 training_fraction = .6
 learning_rate = 0.001
@@ -37,10 +40,10 @@ def main():
     index_to_char = invert_dictionary(char_to_index)
     index_to_phone = invert_dictionary(phone_to_index)
 
-    np_training_words = np_words[:np_words.shape[0] * training_fraction]
-    np_training_pronunciations = np_pronunciations[:np_pronunciations.shape[0] * training_fraction]
-    np_testing_words = np_words[np_words.shape[0] * training_fraction:]
-    np_testing_pronunciations = np_pronunciations[np_pronunciations.shape[0] * training_fraction:]
+    np_training_words = np_words[:int(np_words.shape[0] * training_fraction)]
+    np_training_pronunciations = np_pronunciations[:int(np_pronunciations.shape[0] * training_fraction)]
+    np_testing_words = np_words[int(np_words.shape[0] * training_fraction):]
+    np_testing_pronunciations = np_pronunciations[int(np_pronunciations.shape[0] * training_fraction):]
     print 'Training set size: %s' % np_training_words.shape[0]
 
     # Code for testing that training and testing sets are disjoint. Takes too long to run.
@@ -65,7 +68,7 @@ def main():
     #             print same_characters
     #             print same_word
     
-    model_inputs, model_outputs = build_model(len(char_to_index), len(phone_to_index))
+    model_inputs, model_outputs = build_chars_to_phonemes_model(len(char_to_index), len(phone_to_index))
     training_inputs, training_outputs = build_trainer(model_inputs, model_outputs)
     create_tensorboard_visualization()
     sess = train_model(model_inputs,
@@ -88,77 +91,16 @@ def main():
                                          index_to_phone)
 
 
-def invert_dictionary(dictionary):
-    inv_dictionary = {v: k for k, v in dictionary.iteritems()}
-    return inv_dictionary
-
-
 def create_tensorboard_visualization():
     print 'Creating Tensorboard visualization'
     writer = tf.train.SummaryWriter("/tmp/c2p_model/")
     writer.add_graph(tf.get_default_graph())
 
 
-def build_model(char_vocab_size, phone_vocab_size):
-    '''Here we build a model that takes in a series of characters and outputs a series of phonemes.
-    The model, once trained, can pronounce words.'''
-    print 'Building model'
-    with tf.name_scope('CHAR_TO_PHONE_MODEL'):
-        # PLACEHOLDERS. Model takes in a sequence of characters contained in tf_words.
-        # The model also needs to know the batch size.
-        tf_batch_size = tf.placeholder(tf.int32, name='batch_size')
-        tf_words = tf.placeholder(tf.int32, [None, max_word_size], 'words')
-        # Lookup up embeddings for all characters in each word.
-        tf_char_emb = tf.Variable(tf.random_normal([char_vocab_size, char_emb_dim]), name='character_emb')
-        tf_word_char_embs = tf.nn.embedding_lookup(tf_char_emb, tf_words)
-        # Insert each character one by one into an LSTM.
-        lstm = tf.nn.rnn_cell.LSTMCell(num_units = lstm_dim, state_is_tuple=True)
-        encoder_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
-        for i in range(max_word_size):
-            tf_char_embedding = tf.nn.embedding_lookup(tf_char_emb, tf_words[:, i])
-            
-            with tf.variable_scope('LSTM_ENCODER') as lstm_scope:
-                if i > 0:
-                    lstm_scope.reuse_variables()
-                encoder_output, encoder_hidden_state = lstm(tf_char_embedding, encoder_hidden_state)
-        # Run encoder output through dense layer to process output
-        tf_encoder_output_W = tf.Variable(tf.random_normal([lstm_dim, lstm_dim]), name='encoder_output_emb')
-        tf_encoder_output_b = tf.Variable(tf.random_normal([lstm_dim]), name='encoder_output_bias')
-        encoder_output_emb = tf.matmul(encoder_output, tf_encoder_output_W) + tf_encoder_output_b
-
-        # lstm_first_hidden_state = tf.nn.relu(tf.matmul(lstm_hidden_state[0], tf_encoder_output_W) + tf_encoder_output_b)
-        # lstm_second_hidden_state = tf.nn.relu(tf.matmul(lstm_hidden_state[1], tf_encoder_output_W) + tf_encoder_output_b)
-        # lstm_hidden_state = (lstm_first_hidden_state, lstm_second_hidden_state)
-
-        decoder_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
-
-        # Use hidden state of character encoding stage (this is the phoneme embedding) to predict phonemes.
-        phonemes = []
-        tf_phone_pred_w = tf.Variable(tf.random_normal([lstm.output_size, phone_vocab_size]), name='phoneme_prediction_emb')
-        tf_phone_pred_b = tf.Variable(tf.random_normal([phone_vocab_size]), name='phoneme_prediction_bias')
-        for j in range(max_pronunciation_size):
-            with tf.variable_scope('LSTM_DECODER') as lstm_scope:
-                if j == 0:
-                    decoder_output, decoder_hidden_state = lstm(encoder_output_emb, decoder_hidden_state)
-                else:
-                    lstm_scope.reuse_variables()
-                    decoder_output, decoder_hidden_state = lstm(tf.zeros([tf_batch_size, lstm_dim]), decoder_hidden_state)
-                phoneme = tf.matmul(decoder_output, tf_phone_pred_w) + tf_phone_pred_b
-                phonemes.append(phoneme)
-        tf_phonemes = tf.pack(phonemes, axis=1)
-    # Print model variables.
-    model_variables = tf.trainable_variables()
-    print 'Model variables:'
-    # for model_variable in model_variables:
-    #     print ' - ', model_variable.name
-    
-    return [tf_words, tf_batch_size], [tf_phonemes, encoder_output_emb]
-    
-
 def build_trainer(model_inputs, model_outputs):
     print 'Building trainer component'
     tf_batch_size = model_inputs[1]
-    tf_labels = tf.placeholder(tf.int32, [None, max_pronunciation_size], 'pronunciations')
+    tf_labels = tf.placeholder(tf.int32, [None, MAX_PRONUNCIATION_SIZE], 'pronunciations')
     tf_phonemes = model_outputs[0]
     tf_cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(tf_phonemes, tf_labels, name='loss')
     tf_loss = tf.reduce_sum(tf_cross_entropy) / tf.cast(tf_batch_size, tf.float32)
@@ -167,8 +109,8 @@ def build_trainer(model_inputs, model_outputs):
 
 def train_model(model_inputs, model_outputs, training_inputs, training_outputs, np_words, np_pronunciations):
     print 'Training model'
-    if not os.path.exists(model_path):
-        os.makedirs(model_path)
+    if not os.path.exists(CHAR_2_PHONE_MODEL_DIR):
+        os.makedirs(CHAR_2_PHONE_MODEL_DIR)
     # Extract tf variables.
     tf_words = model_inputs[0]
     tf_batch_size = model_inputs[1]
@@ -179,7 +121,7 @@ def train_model(model_inputs, model_outputs, training_inputs, training_outputs, 
     with tf.name_scope("SAVER"):
         saver = tf.train.Saver(max_to_keep=10)
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(tf_loss)
-    sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
+    sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
     sess.run(tf.initialize_all_variables())
     current_batch_size = batch_size
     for epoch in range(n_epochs):
@@ -214,14 +156,14 @@ def train_model(model_inputs, model_outputs, training_inputs, training_outputs, 
         print 'Epoch accuracy: %s' % average_epoch_training_accuracy
         print 'Saving model %s' % epoch
         print
-        saver.save(sess, os.path.join(model_path, 'c2p-model'), global_step=epoch)
+        saver.save(sess, os.path.join(CHAR_2_PHONE_MODEL_DIR, 'c2p-model'), global_step=epoch)
     return sess
 
 
 def evaluate_model_performance_on_test_set(model_inputs, model_outputs, np_words, np_pronunciations, sess=None):
     if sess == None:
         # Start a session to run model in gpu.
-        sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options))
+        sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
         sess.run(tf.initialize_all_variables())
     '''Evaluate model on test examples.'''
     # Unroll model inputs.
@@ -265,10 +207,10 @@ def evaluate_model_performance_on_test_set(model_inputs, model_outputs, np_words
 
 
 def import_words_and_pronunciations_from_files(dir_path=''):
-    np_words = np.load(dir_path + word_output)
-    np_pronunciations = np.load(dir_path + pronunciation_output)
-    char_to_index = pickle.load(open(dir_path + char_to_index_output, 'rb'))
-    phone_to_index = pickle.load(open(dir_path + phone_to_index_output, 'rb'))
+    np_words = np.load(dir_path + CMU_NP_WORDS_FILE_PATH)
+    np_pronunciations = np.load(dir_path + CMU_NP_PRONUNCIATIONS_FILE_PATH)
+    char_to_index = pickle.load(open(dir_path + CMU_CHAR_TO_INDEX_FILE_PATH, 'rb'))
+    phone_to_index = pickle.load(open(dir_path + CMU_PHONE_TO_INDEX_FILE_PATH, 'rb'))
     return np_words, np_pronunciations, char_to_index, phone_to_index
 
 
@@ -291,9 +233,9 @@ def print_phoneme_label_prediction_pairs(np_words, np_predictions, np_labels, in
         np_word = np_words[i,:]
         np_prediction = np_predictions[i,:]
         np_label = np_labels[i,:]
-        word = ''.join([index_to_char[np_word[j]] for j in range(max_word_size)])
-        prediction = ' '.join([index_to_phone[np_prediction[j]] for j in range(max_pronunciation_size)])
-        label = ' '.join([index_to_phone[np_label[j]] for j in range(max_pronunciation_size)])
+        word = ''.join([index_to_char[np_word[j]] for j in range(MAX_WORD_SIZE)])
+        prediction = ' '.join([index_to_phone[np_prediction[j]] for j in range(MAX_PRONUNCIATION_SIZE)])
+        label = ' '.join([index_to_phone[np_label[j]] for j in range(MAX_PRONUNCIATION_SIZE)])
         print word, ' | ', prediction, ' | ', label
 
 

@@ -25,6 +25,7 @@ from config import SEMEVAL_HUMOR_DIR
 from config import HUMOR_TWEET_PAIR_DIR
 from config import CHAR_TO_INDEX_FILE_PATH
 
+
 def main():
     # Find hashtags, create character vocabulary, print dataset statistics, extract/format tweet pairs and save everything.
     print "Processing #HashtagWars data..."
@@ -44,7 +45,8 @@ def main():
      
 # def main():
 #     test_reconstruct_tweets_from_file()
-    
+
+
 def format_tweet_pairs(data, char_to_index, max_tweet_size=140):
     '''This script converts every character in all tweets into an index.
     It stores each tweet side by side, each tweet constrained to 150 characters long.
@@ -71,7 +73,8 @@ def format_tweet_pairs(data, char_to_index, max_tweet_size=140):
                     np_tweet_pairs[pair_index][i + max_tweet_size] = char_to_index[character]
             
     return np_tweet_pairs, np_tweet_pair_labels
-    
+
+
 def output_tweet_statistics(hashtags):
     '''This function analyzes the dataset and prints statistics for it.
     These statistics have to do with the number of tweets, the largest and average
@@ -130,7 +133,8 @@ def output_tweet_statistics(hashtags):
     print 'Average winning tweet length: %s' % average_winning_tweet_length
     print 'Tweet length standard deviation: %s' % tweet_std_dev
     print 'Winning tweet length standard deviation: %s' % winning_tweet_std_dev
-    
+
+
 def build_character_vocabulary(hashtags):
     '''Find all characters special or alphabetical that appear in the dataset.
     Construct a vocabulary that assigns a unique index to each character and
@@ -150,7 +154,8 @@ def build_character_vocabulary(hashtags):
     for i in range(len(characters)):
         vocabulary[characters[i]] = i
     return vocabulary
-    
+
+
 def get_hashtag_file_names():
     '''Returns .tsv file name for each hashtag in the dataset (extension omitted).'''
     f = []
@@ -159,7 +164,8 @@ def get_hashtag_file_names():
         break
     g = [os.path.splitext(hashtag)[0] for hashtag in f]
     return g
-    
+
+
 def extract_tweet_pairs_from_file(hashtag_file):
     '''This script extracts tweet pairs from the file hashtag_file.
     It stores them in an array of tweet pairs, each tweet pair
@@ -201,6 +207,7 @@ def extract_tweet_pairs_from_file(hashtag_file):
                 pairs.append([top_ten_tweet, winning_tweet, 1])
     return pairs
 
+
 def save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag):
     print 'Saving data for hashtag %s' % hashtag
     # Create directories if they don't exist
@@ -209,7 +216,8 @@ def save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag):
     # Save hashtag tweet pair data into training or testing folders depending on training_hashtag
     np.save(HUMOR_TWEET_PAIR_DIR + hashtag + '_pairs.npy', np_tweet_pairs)
     np.save(HUMOR_TWEET_PAIR_DIR + hashtag + '_labels.npy', np_tweet_pair_labels)
-    
+
+
 ### Unit Tests ###
 def test_get_hashtag_file_names():
     file_names = get_hashtag_file_names()
@@ -217,6 +225,7 @@ def test_get_hashtag_file_names():
         assert '.tsv' not in name
     print len(file_names)
     assert len(file_names) == 101 #Number of hashtags in dataset
+
 
 def test_reconstruct_tweets_from_file():
     max_tweet_size = 140
@@ -241,7 +250,8 @@ def test_reconstruct_tweets_from_file():
                         tweet = line[1]
                         if tweet <= max_tweet_size:
                             assert tweet in tweets
-    
+
+
 def test_training_and_testing_sets_are_disjoint():
     for (dirpath, dirnames, filenames) in walk(HUMOR_TWEET_PAIR_DIR):
         for (dirpath2, dirnames2, filenames2) in walk(test_output_dir):

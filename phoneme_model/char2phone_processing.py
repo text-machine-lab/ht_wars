@@ -1,30 +1,25 @@
-'''David Donahue 2016. This model is designed to convert a sequence of characters into a sequence of phonemes.
+"""David Donahue 2016. This model is designed to convert a sequence of characters into a sequence of phonemes.
 The model in essence learns how to pronounce each word. This model is trained on the CMU Pronouncing Dictionary.
 An LSTM will take in characters (encoding) and another LSTM will produce phonemes (decoding). The model will
 train in batches on the 100k word pronunciations in the dictionary. The dataset will be ordered randomly for
-this purpose.'''
-
-import tensorflow as tf
+this purpose."""
 import numpy as np
 import sys
 import cPickle as pickle
 from numpy import int64
 
-sys.path.append('../')
 from config import CMU_DICTIONARY_FILE_PATH
 from config import CMU_SYMBOLS_FILE_PATH
+from config import CMU_CHAR_TO_INDEX_FILE_PATH
+from config import CMU_PHONE_TO_INDEX_FILE_PATH
+from config import CMU_NP_WORDS_FILE_PATH
+from config import CMU_NP_PRONUNCIATIONS_FILE_PATH
+from tf_tools import MAX_WORD_SIZE
+from tf_tools import MAX_PRONUNCIATION_SIZE
 
-word_output = 'cmu_words.npy'
-pronunciation_output = 'cmu_pronunciations.npy'
-char_to_index_output = 'cmu_char_to_index.cpkl'
-phone_to_index_output = 'cmu_phone_to_index.cpkl'
-
-max_word_size = 20
-max_pronunciation_size = 20
 
 def main():
     print 'Starting program'
-    change_program_parameters_with_command_line_arguments()
     run_command_specified_from_command_line()
     print_word_pronunciation_pairs_from_file()
     print 'Done!'
@@ -34,37 +29,15 @@ def run_command_specified_from_command_line():
     # Run specified command (sys.argv[1])
     command = sys.argv[1]
     if command == 'extract_dataset':
-        np_words, np_pronunciations, char_to_index, phone_to_index = extract_CMU_dataset(max_word_size=max_word_size)
-        save_numpy_array(np_words, word_output)
-        save_numpy_array(np_pronunciations, pronunciation_output)
-        save_pickle_file(char_to_index, char_to_index_output)
-        save_pickle_file(phone_to_index, phone_to_index_output)
+        np_words, np_pronunciations, char_to_index, phone_to_index = extract_CMU_dataset(max_word_size=MAX_WORD_SIZE)
+        save_numpy_array(np_words, CMU_NP_WORDS_FILE_PATH)
+        save_numpy_array(np_pronunciations, CMU_NP_PRONUNCIATIONS_FILE_PATH)
+        save_pickle_file(char_to_index, CMU_CHAR_TO_INDEX_FILE_PATH)
+        save_pickle_file(phone_to_index, CMU_PHONE_TO_INDEX_FILE_PATH)
     elif command == 'train':
         train_model()
     elif command == 'help':
         print_help_info()
-
-
-def change_program_parameters_with_command_line_arguments():
-    # Make sure user entered a command
-    if len(sys.argv) < 2:
-        print 'Must enter command'
-        print 'Usage: python char2phone_model.py [command] {args}'
-        print 'Type "python char2phone_model.py help" for more info'
-        exit()
-    # Analyze arguments to modify program behavior (sys.argv[>1])
-    for i in range(2, len(sys.argv)):
-        arg = sys.argv[i]
-        if arg.startswith('-'):
-            if arg == '-max_word_size':
-                data = sys.argv[i+1]
-                global max_word_size 
-                max_word_size = int(data)
-            if arg == '-max_pronunciation_size':
-                data = sys.argv[i+1]
-                global max_pronunciation_size
-                max_pronunciation_size = int(data)
-
 
 def save_numpy_array(np_array, filename):
     print 'Saving numpy array as %s' % filename
@@ -152,27 +125,28 @@ def extract_CMU_words_and_pronunciations_in_index_format(char_to_index, phone_to
     is a numpy row of indices, each index mapped to a character using char_to_index. Each pronunciation is
     a numpy row of indices, each index mapped to a phoneme using phone_to_index.'''
     print 'Extracting words and their pronunciations as separate numpy arrays'
-    np_words = np.zeros([num_pairs, max_word_size], dtype=int64)
-    np_pronunciations = np.zeros([num_pairs, max_pronunciation_size], dtype=int64)
+    np_words = np.zeros([num_pairs, MAX_WORD_SIZE], dtype=int64)
+    np_pronunciations = np.zeros([num_pairs, MAX_PRONUNCIATION_SIZE], dtype=int64)
     with open(CMU_DICTIONARY_FILE_PATH) as f:
         counter = 0
         for line in f:
             if line[0].isalpha(): # All lines with ; are comments, ignore them.
                 word, pronunciation = extract_word_and_pronunciation_from_line(line)
                 for i in range(len(word)):
-                    if i < max_word_size:
+                    if i < MAX_WORD_SIZE:
                         np_words[counter, i] = char_to_index[word[i]] # Convert character to index and store in array.
                 for i in range(len(pronunciation)):
-                    if i < max_pronunciation_size:
+                    if i < MAX_PRONUNCIATION_SIZE:
                         np_pronunciations[counter, i] = phone_to_index[pronunciation[i]]
                 counter += 1
     # Shuffle.
     np_word_phone_pairs = np.concatenate([np_words, np_pronunciations], axis=1)
     np.random.shuffle(np_word_phone_pairs)
-    np_words_shuffled = np_word_phone_pairs[:,:max_word_size]
-    np_pronunciations_shuffled = np_word_phone_pairs[:,max_word_size:max_word_size+max_pronunciation_size]
+    np_words_shuffled = np_word_phone_pairs[:, :MAX_WORD_SIZE]
+    np_pronunciations_shuffled = np_word_phone_pairs[:, MAX_WORD_SIZE:MAX_WORD_SIZE + MAX_PRONUNCIATION_SIZE]
     
     return np_words_shuffled, np_pronunciations_shuffled
+
 
 def extract_word_and_pronunciation_from_line(line):
     '''Extracts a word and a pronunciation from each line. Each word is a string
@@ -196,20 +170,21 @@ def print_word_pronunciation_pairs_from_file():
     '''This program opens the file, runs through each valid
     line and prints word-pronunciation pairs.'''
     print 'Printing saved word-pronunciation pairs'
-    np_words = np.load(word_output)
-    np_pronunciations = np.load(pronunciation_output)
-    char_to_index = pickle.load(open(char_to_index_output, 'rb'))
-    phone_to_index = pickle.load(open(phone_to_index_output, 'rb'))
+    np_words = np.load(CMU_NP_WORDS_FILE_PATH)
+    np_pronunciations = np.load(CMU_NP_PRONUNCIATIONS_FILE_PATH)
+    char_to_index = pickle.load(open(CMU_CHAR_TO_INDEX_FILE_PATH, 'rb'))
+    phone_to_index = pickle.load(open(CMU_PHONE_TO_INDEX_FILE_PATH, 'rb'))
     index_to_char = {v: k for k, v in char_to_index.iteritems()}
     index_to_phone = {v: k for k, v in phone_to_index.iteritems()}
     num_pairs_to_print = 100
     for i in range(-num_pairs_to_print, num_pairs_to_print):
         np_word = np_words[i,:]
         np_pronunciation = np_pronunciations[i,:]
-        word = ''.join([index_to_char[np_word[j]] for j in range(max_word_size)])
-        pronunciation = ' '.join([index_to_phone[np_pronunciation[j]] for j in range(max_pronunciation_size)])
+        word = ''.join([index_to_char[np_word[j]] for j in range(MAX_WORD_SIZE)])
+        pronunciation = ' '.join([index_to_phone[np_pronunciation[j]] for j in range(MAX_PRONUNCIATION_SIZE)])
         
         print word, pronunciation
+
 
 def train_model():
     print 'Training model'

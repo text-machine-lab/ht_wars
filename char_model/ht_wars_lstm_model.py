@@ -19,6 +19,8 @@ import cPickle as pickle
 from config import HUMOR_TWEET_PAIR_DIR
 from config import CHAR_TO_INDEX_FILE_PATH
 import gc
+from tools import load_hashtag_data_and_vocabulary
+import resource
 
 tf.logging.set_verbosity(tf.logging.ERROR)
 
@@ -44,17 +46,24 @@ def train():
     '''Load all tweet pairs per all hashtags. Per hashtag, train on all other hashtags, test on current hashtag.
     Print out micro-accuracy each iteration and print out overall accuracy after.'''
     # Load training tweet pairs/labels, and train on them.
+    print print_memory_usage()
     hashtag_datas, char_to_index, vocab_size = load_hashtag_data_and_vocabulary(HUMOR_TWEET_PAIR_DIR, CHAR_TO_INDEX_FILE_PATH)
+    print print_memory_usage()
 #     all_tweet_pairs = np.concatenate([hashtag_datas[i][1] for i in range(len(hashtag_datas))])
 #     all_tweet_labels = np.concatenate([hashtag_datas[i][0] for i in range(len(hashtag_datas))])
     accuracies = []
     print
     for i in range(len(hashtag_datas)):
         # Train on all hashtags but one, test on one
+        print 'Epoch beginning ',
+        print_memory_usage()
         ht_model = HashtagWarsCharacterModel(TWEET_SIZE, vocab_size)
-        
+        print 'Model build ',
+        print_memory_usage()
         hashtag_name, np_hashtag_tweet1, np_hashtag_tweet2, np_hashtag_tweet_labels, np_other_tweet1, np_other_tweet2, np_other_tweet_labels = extract_hashtag_data_for_leave_one_out(hashtag_datas, i)
-        
+        print 'Data splice ',
+        print_memory_usage()
+
         print('Training model and testing on hashtag: %s' % hashtag_name)
         print('Shape of training tweet1 input: %s' % str(np_other_tweet1.shape))
         print('Shape of training tweet2 input: %s' % str(np_other_tweet2.shape))
@@ -62,11 +71,19 @@ def train():
         print('Shape of testing hashtag tweet2 input: %s' % str(np_hashtag_tweet2.shape))
         
         ht_model.train(np_other_tweet1, np_other_tweet2, np_other_tweet_labels)
+        print 'Training ',
+        print_memory_usage()
         accuracy = ht_model.predict(np_hashtag_tweet1, np_hashtag_tweet2, np_hashtag_tweet_labels)
+        print 'Testing ',
+        print_memory_usage()
         accuracies.append(accuracy)
         gc.collect()
     print 'Total Model Accuracy: %s' % np.mean(accuracies)
-    print 'Done!'  
+    print 'Done!'
+
+
+def print_memory_usage():
+    print 'Memory Usage: %s' % resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
 
 
 def test():
@@ -142,18 +159,23 @@ class HashtagWarsCharacterModel:
         # Hold model for predictions later
         self.model = model
         model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+
         batch_size=1000
         m = tweet1.shape[0]
         print 'Training #HashtagWars model...'
         num_batches = m / batch_size
         remaining_examples = m % batch_size
         print 'Number of training examples: %s' % (num_batches * batch_size)
+
         for i in range(num_batches):
             print('Trained on %s examples' % (i * batch_size))
             self.train_batch(model, tweet1, tweet2, labels, i * num_batches, i * num_batches + num_batches)
+            if i % 10 == 0:
+                print 'Batch training',
+                print_memory_usage()
         if remaining_examples > 0:
             self.train_batch(model, tweet1, tweet2, labels, num_batches * batch_size, num_batches * batch_size + remaining_examples)
-            
+
         print 'Finished training model'
 
     def predict(self, tweet1, tweet2, labels):
@@ -237,21 +259,6 @@ def print_model_performance_statistics(tweet_labels, tweet_label_predictions):
     accuracy = np.mean(correct_predictions)
     print('Model test accuracy: %s' % accuracy)
 
-
-def load_hashtag_data_and_vocabulary(tweet_pairs_path, char_to_index_path):
-    '''Load in tweet pairs per hashtag. Create a list of [hashtag_name, pairs, labels] entries.
-    Return tweet pairs, tweet labels, char_to_index.cpkl and vocabulary size.'''
-    hashtag_datas = []
-    for (dirpath, dirnames, filenames) in walk(tweet_pairs_path):
-        for filename in filenames:
-            if '_pairs.npy' in filename:
-                hashtag_name = filename.replace('_pairs.npy','')
-                tweet_pairs = np.load(tweet_pairs_path + filename)
-                tweet_labels = np.load(tweet_pairs_path + hashtag_name + '_labels.npy')
-                hashtag_datas.append([hashtag_name, tweet_pairs, tweet_labels])
-    char_to_index = pickle.load(open(char_to_index_path, 'rb'))
-    vocab_size = len(char_to_index)
-    return hashtag_datas, char_to_index, vocab_size
     
     
     
