@@ -2,6 +2,7 @@
 This makes a function easily accessible and independent of the application. Functions
 here are dependent on data stored in the data/ folder."""
 from os import walk
+import os
 import numpy as np
 import cPickle as pickle
 
@@ -45,4 +46,13 @@ def invert_dictionary(dictionary):
     inv_dictionary = {v: k for k, v in dictionary.iteritems()}
     return inv_dictionary
 
+
+def get_hashtag_file_names(tweet_pairs_dir):
+    '''Returns .tsv file name for each hashtag in the dataset (extension omitted).'''
+    f = []
+    for (dirpath, dirnames, filenames) in walk(tweet_pairs_dir):
+        f.extend(filenames)
+        break
+    g = [os.path.splitext(hashtag)[0] for hashtag in f]
+    return g
 
