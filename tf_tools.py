@@ -26,7 +26,6 @@ def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
         tf_words = tf.placeholder(tf.int32, [None, MAX_WORD_SIZE], 'words')
         # Lookup up embeddings for all characters in each word.
         tf_char_emb = tf.Variable(tf.random_normal([char_vocab_size, CHAR_EMB_DIM]), name='character_emb')
-        tf_word_char_embs = tf.nn.embedding_lookup(tf_char_emb, tf_words)
         # Insert each character one by one into an LSTM.
         lstm = tf.nn.rnn_cell.LSTMCell(num_units=LSTM_EMB_DIM, state_is_tuple=True)
         encoder_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
@@ -55,8 +54,8 @@ def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
                     decoder_output, decoder_hidden_state = lstm(encoder_output_emb, decoder_hidden_state)
                 else:
                     lstm_scope.reuse_variables()
-                    decoder_output, decoder_hidden_state = lstm(tf.zeros([tf_batch_size, LSTM_EMB_DIM]),
-                                                                decoder_hidden_state)
+                    # decoder_output, decoder_hidden_state = lstm(tf.zeros([tf_batch_size, LSTM_EMB_DIM]), decoder_hidden_state)
+                    decoder_output, decoder_hidden_state = lstm(encoder_output_emb, decoder_hidden_state)
                 phoneme = tf.matmul(decoder_output, tf_phone_pred_w) + tf_phone_pred_b
                 phonemes.append(phoneme)
         tf_phonemes = tf.pack(phonemes, axis=1)

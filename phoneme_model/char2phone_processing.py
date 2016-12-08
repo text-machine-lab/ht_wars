@@ -8,11 +8,11 @@ import sys
 import cPickle as pickle
 from numpy import int64
 
-from config import CMU_DICTIONARY_FILE_PATH
 from config import CMU_SYMBOLS_FILE_PATH
 from config import CMU_CHAR_TO_INDEX_FILE_PATH
 from config import CMU_PHONE_TO_INDEX_FILE_PATH
 from config import CMU_NP_WORDS_FILE_PATH
+from config import CMU_DICTIONARY_FILE_PATH
 from config import CMU_NP_PRONUNCIATIONS_FILE_PATH
 from tf_tools import MAX_WORD_SIZE
 from tf_tools import MAX_PRONUNCIATION_SIZE
@@ -38,6 +38,7 @@ def run_command_specified_from_command_line():
         train_model()
     elif command == 'help':
         print_help_info()
+
 
 def save_numpy_array(np_array, filename):
     print 'Saving numpy array as %s' % filename

@@ -36,4 +36,7 @@ DATA DOWNLOAD AND CREATION REQUIREMENTS:
 Once data is generated, all functions in tools.py and tf_tools.py should work. Relative paths from subfolders to datafiles can be found in config.py module.
 If names of external data change (possibly due to a new version, etc.). The paths in config.py can be changed locally before data creation begins.
 
-This README last updated: 1 December 2016
+ATTENTION: Many scripts in subfolders of ht_wars access the config.py script for data paths. This functionality is available automatically in some IDE's (ie. Pycharm),
+but is not enabled by default if running script from command line. The ht_wars directory must be added to the python path.
+
+This README last updated: 7 December 2016

@@ -23,9 +23,9 @@ import sys
 sys.path.append('../')
 from config import SEMEVAL_HUMOR_DIR
 from config import HUMOR_TWEET_PAIR_DIR
-from config import CHAR_TO_INDEX_FILE_PATH
+from config import HUMOR_CHAR_TO_INDEX_FILE_PATH
 from tools import get_hashtag_file_names
-
+from tools import extract_tweet_pairs_from_file
 
 def main():
     # Find hashtags, create character vocabulary, print dataset statistics, extract/format tweet pairs and save everything.
@@ -41,7 +41,7 @@ def main():
         np_tweet_pairs, np_tweet_pair_labels = format_tweet_pairs(data, char_to_index)
         save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag)
     print 'Saving char_to_index.cpkl containing character vocabulary'
-    pickle.dump(char_to_index, open(CHAR_TO_INDEX_FILE_PATH, 'wb'))
+    pickle.dump(char_to_index, open(HUMOR_CHAR_TO_INDEX_FILE_PATH, 'wb'))
     print "Done!"
      
 # def main():
@@ -155,48 +155,6 @@ def build_character_vocabulary(hashtags):
     for i in range(len(characters)):
         vocabulary[characters[i]] = i
     return vocabulary
-
-
-def extract_tweet_pairs_from_file(hashtag_file):
-    '''This script extracts tweet pairs from the file hashtag_file.
-    It stores them in an array of tweet pairs, each tweet pair
-    being a list of the form [tweet_1_text, tweet_2_text, first_tweet_funnier].
-    first_tweet_funnier is 1 if the first tweet is funnier and 0 if the second
-    tweet is funnier.'''
-    pairs = []
-    non_winners = []
-    top_ten = []
-    winner = []
-    # Find winner, top-ten, and non-winning tweets.
-    with open(hashtag_file) as tsv:
-        for line in csv.reader(tsv, dialect='excel-tab'):
-            tweet_rank = int(line[2])
-            tweet_text = line[1]
-            if tweet_rank == 0:
-                non_winners.append(tweet_text)
-            if tweet_rank == 1:
-                top_ten.append(tweet_text)
-            if tweet_rank == 2:
-                winner.append(tweet_text)
-    # Create pairs from non-winning and top-ten tweets.
-    for non_winning_tweet in non_winners:
-        for top_ten_tweet in winner + top_ten:
-            #Create pair
-            funnier_tweet_first = bool(random.getrandbits(1))
-            if funnier_tweet_first:
-                pairs.append([top_ten_tweet, non_winning_tweet, 0])
-            else:
-                pairs.append([non_winning_tweet, top_ten_tweet, 1])
-    # Create pairs from top-ten and winning tweet.
-    for top_ten_tweet in top_ten:
-        for winning_tweet in winner:
-            #Create pair
-            funnier_tweet_first = bool(random.getrandbits(1))
-            if funnier_tweet_first:
-                pairs.append([winning_tweet, top_ten_tweet, 0])
-            else:
-                pairs.append([top_ten_tweet, winning_tweet, 1])
-    return pairs
 
 
 def save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag):

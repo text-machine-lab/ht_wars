@@ -6,6 +6,7 @@ import tensorflow as tf
 import numpy as np
 import cPickle as pickle
 import os
+import math
 from config import CMU_NP_WORDS_FILE_PATH
 from config import CMU_NP_PRONUNCIATIONS_FILE_PATH
 from char2phone_processing import CMU_CHAR_TO_INDEX_FILE_PATH
@@ -27,8 +28,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 # Model parameters.
 batch_size = 100
 training_fraction = .6
-learning_rate = 0.001
-n_epochs = 5
+learning_rate = 0.0003
+n_epochs = 100
 
 
 def main():
@@ -150,7 +151,10 @@ def train_model(model_inputs, model_outputs, training_inputs, training_outputs, 
             # Collapse this distribution to get the predicted phoneme.
             np_batch_phoneme_predictions = np.argmax(np_batch_phonemes,axis=2)
             accuracy = calculate_accuracy(np_batch_phoneme_predictions, np_pronunciation_batch)
-            batch_accuracies.append(accuracy)
+            if not math.isnan(accuracy):
+                batch_accuracies.append(accuracy)
+            else:
+                print 'Skipping accuracy'
             starting_training_example += current_batch_size
         average_epoch_training_accuracy = sum(batch_accuracies) / len(batch_accuracies)
         print 'Epoch accuracy: %s' % average_epoch_training_accuracy

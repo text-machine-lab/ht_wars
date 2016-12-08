@@ -5,12 +5,12 @@ phonetic embedding and a GloVe embedding to describe how to pronounce the word a
 word means, respectively. These will serve as features. Other features may be added over time.
 This model will be built in Tensorflow."""
 from config import HUMOR_TWEET_PAIR_DIR
-from config import CHAR_TO_INDEX_FILE_PATH
+from config import HUMOR_CHAR_TO_INDEX_FILE_PATH
 from tools import load_hashtag_data_and_vocabulary
 
 
 def main():
-    dataset = load_hashtag_data_and_vocabulary(HUMOR_TWEET_PAIR_DIR, CHAR_TO_INDEX_FILE_PATH)
+    dataset = load_hashtag_data_and_vocabulary(HUMOR_TWEET_PAIR_DIR, HUMOR_CHAR_TO_INDEX_FILE_PATH)
     model_params = build_humor_model()
 
 
