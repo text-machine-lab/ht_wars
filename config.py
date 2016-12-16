@@ -23,7 +23,8 @@ CHAR_2_PHONE_MODEL_DIR = os.path.join(DATA_DIR, 'char_2_phone_models')
 
 HUMOR_TWEET_PAIR_DIR = os.path.join(DATA_DIR, 'numpy_tweet_pairs/')
 HUMOR_CHAR_TO_INDEX_FILE_PATH = os.path.join(DATA_DIR, 'humor_char_to_index.cpkl')
-HUMOR_INDEX_TO_WORD_FILE_PATH = os.path.join(DATA_DIR, 'humor_word_to_index.cpkl')
+HUMOR_INDEX_TO_WORD_FILE_PATH = os.path.join(DATA_DIR, 'humor_index_to_word.cpkl')
 HUMOR_WORD_TO_GLOVE_FILE_PATH = os.path.join(DATA_DIR, 'humor_word_to_glove.cpkl')
-#HUMOR_HASHTAG_TWEETS_DIR = os.path.join
+
+HUMOR_TWEET_PAIR_EMBEDDING_DIR = os.path.join(DATA_DIR, 'tweet_pair_embeddings/')
 

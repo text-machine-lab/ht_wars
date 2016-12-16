@@ -46,28 +46,6 @@ def main():
     np_testing_words = np_words[int(np_words.shape[0] * training_fraction):]
     np_testing_pronunciations = np_pronunciations[int(np_pronunciations.shape[0] * training_fraction):]
     print 'Training set size: %s' % np_training_words.shape[0]
-
-    # Code for testing that training and testing sets are disjoint. Takes too long to run.
-    # for i in range(np_training_pronunciations.shape[0]):
-    #     for j in range(np_testing_pronunciations.shape[0]):
-    #         np_training_pronunciation = np_training_pronunciations[i,:]
-    #         np_testing_pronunciation = np_testing_pronunciations[j,:]
-    #         same_phonemes = (np_training_pronunciation == np_testing_pronunciation)
-    #         same_pronunciation = np.mean(same_phonemes)
-    #         np_training_word = np_training_words[i,:]
-    #         np_testing_word = np_testing_words[j,:]
-    #         same_characters = (np_training_word == np_testing_word)
-    #         same_word = np.mean(same_characters)
-    #         if same_pronunciation == 1 and same_word == 1:
-    #             print 'Same word found in training and testing!'
-    #             print np_training_pronunciation
-    #             print np_testing_pronunciation
-    #             print np_training_word
-    #             print np_testing_word
-    #             print same_pronunciation
-    #             print same_phonemes
-    #             print same_characters
-    #             print same_word
     
     model_inputs, model_outputs = build_chars_to_phonemes_model(len(char_to_index), len(phone_to_index))
     training_inputs, training_outputs = build_trainer(model_inputs, model_outputs)
