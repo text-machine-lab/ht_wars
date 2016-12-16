@@ -8,7 +8,7 @@ from humor_processing import load_tweets_from_hashtag
 from humor_processing import look_up_glove_embeddings
 from humor_processing import convert_tweet_to_gloves
 from tools import HUMOR_MAX_WORDS_IN_TWEET
-from config import HUMOR_TWEET_PAIR_EMBEDDING_DIR
+from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
 from config import DATA_DIR
 
 
@@ -33,9 +33,9 @@ def test_saved_files():
     example_hashtag = '420_Celebs'
     index_to_word = pickle.load(open(DATA_DIR + 'humor_index_to_word.cpkl', 'rb'))
     word_to_glove = pickle.load(open(DATA_DIR + 'humor_word_to_glove.cpkl', 'rb'))
-    np_first_tweets = np.load(open(HUMOR_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_first_tweet_glove.npy'))
-    np_second_tweets = np.load(open(HUMOR_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_second_tweet_glove.npy'))
-    np_winner_labels = np.load(open(HUMOR_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_label.npy'))
+    np_first_tweets = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_first_tweet_glove.npy'))
+    np_second_tweets = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_second_tweet_glove.npy'))
+    np_winner_labels = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_label.npy'))
     assert np_first_tweets.shape == np_second_tweets.shape
     assert np_winner_labels.shape[0] == np_first_tweets.shape[0]
     assert len(index_to_word) >= len(word_to_glove)

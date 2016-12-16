@@ -6,13 +6,15 @@ For each hashtag, it will generate and save a numpy array for each tweet. The nu
 be shaped m x n x e where m is the number of tweet pairs in the hashtag, n is the max tweet size and
 e is the concatenated size of both the phonetic and glove embeddings."""
 from tools import get_hashtag_file_names
-from config import SEMEVAL_HUMOR_DIR
+from config import SEMEVAL_HUMOR_TRAINING_DIR
+from config import SEMEVAL_HUMOR_TRIAL_DIR
 from config import WORD_VECTORS_FILE_PATH
 from config import HUMOR_INDEX_TO_WORD_FILE_PATH
 from config import HUMOR_WORD_TO_GLOVE_FILE_PATH
 from tools import extract_tweet_pairs_from_file
 from tools import HUMOR_MAX_WORDS_IN_TWEET
-from config import HUMOR_TWEET_PAIR_EMBEDDING_DIR
+from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
+from config import HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR
 import os
 import sys
 import csv
@@ -26,15 +28,21 @@ def main():
     if not len(sys.argv) > 1:
         print 'Please specify argument: vocabulary|tweet_pairs'
 
-    elif sys.argv[1] == 'vocabulary':
+    elif sys.argv[1] == 'vocabulary' or sys.argv[1] == 'all':
         """For all hashtags, for the first and second tweet in all tweet pairs separately,
         for all words in the tweet, look up a glove embedding and generate a phonetic embedding."""
         print 'Creating vocabulary and GloVe mappings (may take a while)'
-        hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_DIR)
+        train_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRAINING_DIR)
         vocabulary = []
-        for hashtag_name in hashtag_names:
-            tweets, labels = load_tweets_from_hashtag(SEMEVAL_HUMOR_DIR + hashtag_name + '.tsv')
+        for hashtag_name in train_hashtag_names:
+            tweets, labels = load_tweets_from_hashtag(SEMEVAL_HUMOR_TRAINING_DIR + hashtag_name + '.tsv')
             vocabulary = build_vocabulary(tweets, vocabulary=vocabulary)
+
+        test_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRIAL_DIR)
+        for hashtag_name in test_hashtag_names:
+            tweets, labels = load_tweets_from_hashtag(SEMEVAL_HUMOR_TRIAL_DIR + hashtag_name + '.tsv')
+            vocabulary = build_vocabulary(tweets, vocabulary=vocabulary)
+
         word_to_glove = look_up_glove_embeddings(vocabulary)
         print 'Size of vocabulary: %s' % len(vocabulary)
         print 'Number of GloVe vectors found: %s' % len(word_to_glove)
@@ -44,34 +52,45 @@ def main():
         print 'Saving %s' % HUMOR_WORD_TO_GLOVE_FILE_PATH
         pickle.dump(word_to_glove, open(HUMOR_WORD_TO_GLOVE_FILE_PATH, 'wb'))
 
-    elif sys.argv[1] == 'tweet_pairs':
-        if not os.path.exists(HUMOR_TWEET_PAIR_EMBEDDING_DIR):
-            os.makedirs(HUMOR_TWEET_PAIR_EMBEDDING_DIR)
+    elif sys.argv[1] == 'tweet_pairs' or sys.argv[1] == 'all':
         """Load vocabulary created from vocabulary step. Load tweets
         and create tweet pairs using winner/top10/loser labels. Split tweet pairs into
         left tweet, right tweet, and left-right-funnier label. Convert all left tweets
         and all right tweets into glove embeddings per word. Save numpy array for left tweets,
-        right tweets, and labels."""
+        right tweets, and labels. Do this for both training and trial datasets, and save both."""
         vocabulary = pickle.load(open(HUMOR_INDEX_TO_WORD_FILE_PATH, 'rb'))
         word_to_glove = pickle.load(open(HUMOR_WORD_TO_GLOVE_FILE_PATH, 'rb'))
-        hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_DIR)
-        all_tweets = []
-        all_labels = []
-        for hashtag_name in hashtag_names:
-            tweets, labels = load_tweets_from_hashtag(SEMEVAL_HUMOR_DIR + hashtag_name + '.tsv')
-            all_tweets = all_tweets + tweets
-            all_labels = all_labels + labels
-            tweet_pairs = extract_tweet_pairs_from_file(SEMEVAL_HUMOR_DIR + hashtag_name + '.tsv')
-            tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
-            tweet2 = [tweet_pair[1] for tweet_pair in tweet_pairs]
-            labels = [tweet_pair[2] for tweet_pair in tweet_pairs]
-            np_label = np.array(labels)
-            np_tweet1_gloves = convert_tweet_to_gloves(tweet1, word_to_glove, HUMOR_MAX_WORDS_IN_TWEET, 200)
-            np_tweet2_gloves = convert_tweet_to_gloves(tweet2, word_to_glove, HUMOR_MAX_WORDS_IN_TWEET, 200)
-            # Save
-            np.save(open(HUMOR_TWEET_PAIR_EMBEDDING_DIR + hashtag_name + '_label.npy', 'wb'), np_label)
-            np.save(open(HUMOR_TWEET_PAIR_EMBEDDING_DIR + hashtag_name + '_first_tweet_glove.npy', 'wb'), np_tweet1_gloves)
-            np.save(open(HUMOR_TWEET_PAIR_EMBEDDING_DIR + hashtag_name + '_second_tweet_glove.npy', 'wb'), np_tweet2_gloves)
+        convert_tweets_to_glove_tweet_pairs(word_to_glove,
+                                            SEMEVAL_HUMOR_TRAINING_DIR,
+                                            HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR)
+        convert_tweets_to_glove_tweet_pairs(word_to_glove,
+                                            SEMEVAL_HUMOR_TRIAL_DIR,
+                                            HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR)
+
+
+def convert_tweets_to_glove_tweet_pairs(word_to_glove, tweet_input_dir, tweet_pair_output_dir):
+    if not os.path.exists(tweet_pair_output_dir):
+        os.makedirs(tweet_pair_output_dir)
+    train_hashtag_names = get_hashtag_file_names(tweet_input_dir)
+    all_tweets = []
+    all_labels = []
+    for hashtag_name in train_hashtag_names:
+        tweets, labels = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv')
+        all_tweets = all_tweets + tweets
+        all_labels = all_labels + labels
+        tweet_pairs = extract_tweet_pairs_from_file(tweet_input_dir + hashtag_name + '.tsv')
+        tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
+        tweet2 = [tweet_pair[1] for tweet_pair in tweet_pairs]
+        labels = [tweet_pair[2] for tweet_pair in tweet_pairs]
+        np_label = np.array(labels)
+        np_tweet1_gloves = convert_tweet_to_gloves(tweet1, word_to_glove, HUMOR_MAX_WORDS_IN_TWEET, 200)
+        np_tweet2_gloves = convert_tweet_to_gloves(tweet2, word_to_glove, HUMOR_MAX_WORDS_IN_TWEET, 200)
+        # Save
+        np.save(open(tweet_pair_output_dir + hashtag_name + '_label.npy', 'wb'), np_label)
+        np.save(open(tweet_pair_output_dir + hashtag_name + '_first_tweet_glove.npy', 'wb'),
+                np_tweet1_gloves)
+        np.save(open(tweet_pair_output_dir + hashtag_name + '_second_tweet_glove.npy', 'wb'),
+                np_tweet2_gloves)
 
 
 def compute_most_words_in_winning_tweets(tweets, labels):

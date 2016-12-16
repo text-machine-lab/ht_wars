@@ -6,9 +6,12 @@ word means, respectively. These will serve as features. Other features may be ad
 This model will be built in Tensorflow."""
 import tensorflow as tf
 import numpy as np
-from config import HUMOR_TWEET_PAIR_EMBEDDING_DIR
+import random
+from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
+from config import HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR
 from tools import HUMOR_MAX_WORDS_IN_TWEET
-from config import SEMEVAL_HUMOR_DIR
+from config import SEMEVAL_HUMOR_TRAINING_DIR
+from config import SEMEVAL_HUMOR_TRIAL_DIR
 from tools import get_hashtag_file_names
 from tf_tools import GPU_OPTIONS
 
@@ -18,21 +21,24 @@ EMBEDDING_HUMOR_MODEL_LEARNING_RATE = 0.005
 
 
 def main():
-    """Game plan: Train the model using leave-one-out to compare directly to the char model.
-    Load each hashtag, train on each hashtag (all but one), then predict only one hashtag."""
+    """Game plan: Use train_dir hashtags to train the model. Then use trial_dir hashtags
+    to evaluate its performance. This creates a faster development environment than
+    leave-one-out."""
     model_vars = build_embedding_humor_model()
     trainer_vars = build_embedding_humor_model_trainer(model_vars)
-    hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_DIR)
+    training_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRAINING_DIR)
+    testing_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRIAL_DIR)
     accuracies = []
-    for i in range(len(hashtag_names)):
-        hashtag_name = hashtag_names[i]
-        sess = train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag_name)
-        accuracy = predict_on_hashtag(sess, model_vars, hashtag_name)
+
+    sess, training_accuracy = train_on_all_other_hashtags(model_vars, trainer_vars, training_hashtag_names, '', n_epochs=1)  # Blank hashtag means train on all training hashtags
+    print 'Mean training accuracy: %s' % training_accuracy
+    for hashtag_name in testing_hashtag_names:
+        accuracy = predict_on_hashtag(sess, model_vars, hashtag_name, HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR)
+        print 'Hashtag %s accuracy: %s' % (hashtag_name, accuracy)
         accuracies.append(accuracy)
-        sess.close()
-        # Do more stuff...
+
     np_accuracies = np.array(accuracies)
-    print 'Final accuracy: %s' % np.mean(accuracies)
+    print 'Final test accuracy: %s' % np.mean(accuracies)
 
 
 def build_embedding_humor_model():
@@ -42,7 +48,7 @@ def build_embedding_humor_model():
     tf_first_input_tweets = tf.placeholder(dtype=tf.float32, shape=[None, HUMOR_MAX_WORDS_IN_TWEET * GLOVE_SIZE], name='first_tweets')
     tf_second_input_tweets = tf.placeholder(dtype=tf.float32, shape=[None, HUMOR_MAX_WORDS_IN_TWEET * GLOVE_SIZE], name='second_tweets')
 
-    toggle_LSTM_True_Dense_False = False  # Toggles between actual LSTM model and dummy dense layer model (the latter is used for debugging purposes)
+    toggle_LSTM_True_Dense_False = True  # Toggles between actual LSTM model and dummy dense layer model (the latter is used for debugging purposes)
     # START MODEL HIDDEN LAYERS #
     if toggle_LSTM_True_Dense_False:
         lstm = tf.nn.rnn_cell.LSTMCell(num_units=GLOVE_SIZE * 2, state_is_tuple=True)
@@ -97,9 +103,8 @@ def build_embedding_humor_model_trainer(model_vars):
     return [tf_loss, tf_labels]
 
 
-def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag_name):
+def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag_name, n_epochs=1):
     batch_size = 50
-    n_epochs = 1
     [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_ratings, tf_batch_size] = model_vars
     [tf_loss, tf_labels] = trainer_vars
     sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
@@ -108,23 +113,24 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
     with tf.name_scope("SAVER"):
         saver = tf.train.Saver(max_to_keep=10)
     sess.run(init)
-
+    accuracies = []
     for epoch in range(n_epochs):
         if n_epochs > 1:
             print 'Epoch %s' % epoch
         for trainer_hashtag_name in hashtag_names:
             if trainer_hashtag_name != hashtag_name:
                 # Train on this hashtag.
-                np_first_tweets, np_second_tweets, np_labels = load_hashtag_data(HUMOR_TWEET_PAIR_EMBEDDING_DIR, trainer_hashtag_name)
+                np_first_tweets, np_second_tweets, np_labels = load_hashtag_data(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR, trainer_hashtag_name)
                 current_batch_size = batch_size
                 # Use these parameters to keep track of batch size and start location.
                 starting_training_example = 0
                 num_batches = np_first_tweets.shape[0] / batch_size
                 remaining_batch_size = np_first_tweets.shape[0] % batch_size
                 batch_accuracies = []
-                #print 'Training on hashtag %s' % trainer_hashtag_name
+                # print 'Training on hashtag %s' % trainer_hashtag_name
                 for i in range(num_batches + 1):
-                    # If we are on the last batch, we are running leftover examples. Otherwise, we stick to global batch_size.
+                    # If we are on the last batch, we are running leftover examples.
+                    # Otherwise, we stick to global batch_size.
                     if i == num_batches:
                         current_batch_size = remaining_batch_size
                     else:
@@ -133,26 +139,34 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
                     np_batch_second_tweets = np_second_tweets[starting_training_example:starting_training_example+current_batch_size]
                     np_batch_labels = np_labels[starting_training_example:starting_training_example+current_batch_size]
                     # Run train step here.
-                    np_batch_predictions = sess.run(train_op, feed_dict={tf_first_input_tweets:np_batch_first_tweets,
-                                                  tf_second_input_tweets:np_batch_second_tweets,
-                                                  tf_labels: np_batch_labels,
-                                                  tf_batch_size: current_batch_size})
+                    [np_batch_predictions, _] = sess.run([tf_predictions, train_op], feed_dict={tf_first_input_tweets:np_batch_first_tweets,
+                                                                                                tf_second_input_tweets:np_batch_second_tweets,
+                                                                                                tf_labels: np_batch_labels,
+                                                                                                tf_batch_size: current_batch_size})
+                    if current_batch_size > 0:
+                        batch_accuracy = np.mean(np_batch_predictions == np_batch_labels)
+                        batch_accuracies.append(batch_accuracy)
+
+                hashtag_accuracy = np.mean(batch_accuracies)
+                print 'Hashtag %s accuracy: %s' % (trainer_hashtag_name, hashtag_accuracy)
+                accuracies.append(hashtag_accuracy)
 
                 starting_training_example += batch_size
             else:
                 print 'Do not train on current hashtag: %s' % trainer_hashtag_name
-    return sess
+    training_accuracy = np.mean(accuracies)
+
+    return sess, training_accuracy
 
 
-def predict_on_hashtag(sess, model_vars, hashtag_name):
+def predict_on_hashtag(sess, model_vars, hashtag_name, hashtag_dir):
     print 'Predicting on hashtag %s' % hashtag_name
     [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_ratings, tf_batch_size] = model_vars
-    np_first_tweets, np_second_tweets, np_labels = load_hashtag_data(HUMOR_TWEET_PAIR_EMBEDDING_DIR, hashtag_name)
+    np_first_tweets, np_second_tweets, np_labels = load_hashtag_data(hashtag_dir, hashtag_name)
     np_predictions = sess.run(tf_predictions, feed_dict={tf_first_input_tweets: np_first_tweets,
-                                                       tf_second_input_tweets: np_second_tweets,
-                                                       tf_batch_size: np_first_tweets.shape[0]})
+                                                         tf_second_input_tweets: np_second_tweets,
+                                                         tf_batch_size: np_first_tweets.shape[0]})
     accuracy = np.mean(np_predictions == np_labels)
-    print 'Leave-one-out accuracy: %s' % accuracy
     return accuracy
 
 

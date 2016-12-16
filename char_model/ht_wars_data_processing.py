@@ -21,7 +21,7 @@ import numpy as np
 import sys
 
 sys.path.append('../')
-from config import SEMEVAL_HUMOR_DIR
+from config import SEMEVAL_HUMOR_TRAINING_DIR
 from config import HUMOR_TWEET_PAIR_DIR
 from config import HUMOR_CHAR_TO_INDEX_FILE_PATH
 from tools import get_hashtag_file_names
@@ -30,14 +30,14 @@ from tools import extract_tweet_pairs_from_file
 def main():
     # Find hashtags, create character vocabulary, print dataset statistics, extract/format tweet pairs and save everything.
     print "Processing #HashtagWars data..."
-    hashtags = get_hashtag_file_names(SEMEVAL_HUMOR_DIR)
+    hashtags = get_hashtag_file_names(SEMEVAL_HUMOR_TRAINING_DIR)
     char_to_index = build_character_vocabulary(hashtags)
     print('Size of character vocabulary: %s' % len(char_to_index))
     output_tweet_statistics(hashtags)
     print 'Extracting tweet pairs...'
     for i in range(len(hashtags)):
         hashtag = hashtags[i]
-        data = extract_tweet_pairs_from_file(SEMEVAL_HUMOR_DIR + hashtag + '.tsv')
+        data = extract_tweet_pairs_from_file(SEMEVAL_HUMOR_TRAINING_DIR + hashtag + '.tsv')
         np_tweet_pairs, np_tweet_pair_labels = format_tweet_pairs(data, char_to_index)
         save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag)
     print 'Saving char_to_index.cpkl containing character vocabulary'
@@ -90,7 +90,7 @@ def output_tweet_statistics(hashtags):
     
     # Find tweet length statistics (max, average, std dev) and number of tweets.
     for hashtag in hashtags:
-        with open(SEMEVAL_HUMOR_DIR + hashtag + '.tsv') as tsv:
+        with open(SEMEVAL_HUMOR_TRAINING_DIR + hashtag + '.tsv') as tsv:
             for line in csv.reader(tsv, dialect='excel-tab'):
                 # Count number of tweets, find longest tweet, find average tweet length
                 # for all tweets, top ten, and winning.
@@ -114,7 +114,7 @@ def output_tweet_statistics(hashtags):
     tweet_std_dev_sum = 0
     winning_tweet_std_dev_sum = 0
     for hashtag in hashtags:
-        with open(SEMEVAL_HUMOR_DIR + hashtag + '.tsv') as tsv:
+        with open(SEMEVAL_HUMOR_TRAINING_DIR + hashtag + '.tsv') as tsv:
             for line in csv.reader(tsv, dialect='excel-tab'):
                 tweet_length = len(line[1])
                 tweet_rank = int(line[2])
@@ -144,7 +144,7 @@ def build_character_vocabulary(hashtags):
     characters.append('')
     #Create list of all characters that appear in dataset.
     for hashtag in hashtags:
-        with open(SEMEVAL_HUMOR_DIR + hashtag + '.tsv') as tsv:
+        with open(SEMEVAL_HUMOR_TRAINING_DIR + hashtag + '.tsv') as tsv:
             for line in csv.reader(tsv, dialect='excel-tab'):
                 for char in line[1]:
                     # If character hasn't been seen before, add it to the vocabulary.
@@ -185,7 +185,7 @@ def test_reconstruct_tweets_from_file():
                     tweets.append(tweet1)
                     tweets.append(tweet2)
                 tweets = list(set(tweets))
-                with open(SEMEVAL_HUMOR_DIR + filename.replace('_pairs.npy', '.tsv')) as tsv:
+                with open(SEMEVAL_HUMOR_TRAINING_DIR + filename.replace('_pairs.npy', '.tsv')) as tsv:
                     for line in csv.reader(tsv, dialect='excel-tab'):
                         tweet = line[1]
                         if tweet <= max_tweet_size:

@@ -100,5 +100,6 @@ def get_hashtag_file_names(tweet_pairs_dir):
         f.extend(filenames)
         break
     g = [os.path.splitext(hashtag)[0] for hashtag in f]
+    random.shuffle(g)
     return g
 
