@@ -2,9 +2,12 @@ import os
 import sys
 import itertools
 from random import random
+import pickle
 
 import numpy as np
 from sklearn.metrics import accuracy_score
+
+from nltk.tokenize import TweetTokenizer
 
 from keras.preprocessing import sequence
 from keras.models import Sequential, Model
@@ -44,7 +47,7 @@ def load_hashtags(directory):
     return data
 
 
-def create_pairwise_data(data):
+def create_pairwise_data(data, mode='all', is_ovv=None):
     """Creates pairwise examples"""
 
     winner = [d[0] for d in data if d[1] == 2]
@@ -53,6 +56,7 @@ def create_pairwise_data(data):
 
     pairs = [(winner, top10), (winner, rest), (top10, rest), ]
 
+    not_append_counter = 0
     training_data = []
     for pair in pairs:
         funny_tweets = pair[0]
@@ -64,7 +68,19 @@ def create_pairwise_data(data):
             else:
                 sample = (not_so_funny_tweet, funny_tweet, 0)
 
-            training_data.append(sample)
+            is_append = True
+
+            if mode != 'all':
+                cur_is_ovv = is_ovv[funny_tweet] or is_ovv[not_so_funny_tweet]
+                is_append = (mode == 'oov' and cur_is_ovv) or (mode == 'not_oov' and not cur_is_ovv)
+
+            if is_append:
+                training_data.append(sample)
+            else:
+                not_append_counter += 1
+
+    if mode != 'all':
+        print('Appended:', len(training_data), 'Skipped:', not_append_counter)
 
     return training_data
 
@@ -94,11 +110,11 @@ def create_model(input_dim, max_len):
     embedded2 = embedding(input2)
 
     conv_l1 = Convolution1D(nb_filter=nb_filter_l1, filter_length=filter_length_l1,
-                         border_mode='valid',
-                         # activation='relu',
-                         # subsample_length=1,
-                         # W_regularizer = l2(regularization),
-                        )
+                            border_mode='valid',
+                            # activation='relu',
+                            # subsample_length=1,
+                            # W_regularizer = l2(regularization),
+                            )
     pool_l1 = MaxPooling1D(pool_length=pool_length_l1, stride=None, border_mode='valid')
     batch_norm_l1 = BatchNormalization()
     activation_l1 = Activation('relu')
@@ -112,17 +128,15 @@ def create_model(input_dim, max_len):
     pool1 = pool_l1(activated1)
     pool2 = pool_l1(activated2)
 
-
     conv_l2 = Convolution1D(nb_filter=nb_filter_l2, filter_length=filter_length_l2,
-                         border_mode='valid',
-                         # activation='relu',
-                         # subsample_length=1,
-                         # W_regularizer = l2(regularization),
-                        )
+                            border_mode='valid',
+                            # activation='relu',
+                            # subsample_length=1,
+                            # W_regularizer = l2(regularization),
+                            )
     pool_l2 = MaxPooling1D(pool_length=pool_length_l2, stride=None, border_mode='valid')
     batch_norm_l2 = BatchNormalization()
     activation_l2 = Activation('relu')
-
 
     conv3 = conv_l2(pool1)
     conv4 = conv_l2(pool2)
@@ -167,35 +181,83 @@ def create_data_matrices(samples, char2idx, max_len):
 
     return X1, X2, y
 
-def main():
-    directory = '../../data/cleaned_tweets/'
 
-    data = load_hashtags(directory)
+def load_pickle(filename):
+    with open(filename, 'rb') as f:
+        word_vectors = pickle.load(f)
+
+    return word_vectors
+
+
+def save_pickle(object, filename):
+    with open(filename, 'wb') as f:
+        pickle.dump(object, f)
+
+
+def load_vocab():
+    word_vectors_filename = '/home/aromanov/word_vectors/glove.twitter.27B.200d.pickled'
+    cache_filename = '../../data/glove.twitter.27B.200d.dictionary.pickled'
+
+    if not os.path.isfile(cache_filename):
+        word_vectors = load_pickle(word_vectors_filename)
+        dictionary = set(word_vectors.keys())
+
+        save_pickle(dictionary, cache_filename)
+    else:
+        dictionary = load_pickle(cache_filename)
+
+    return dictionary
+
+
+def get_is_oov(data, vocab):
+    # data is a list of (text, label)
+    tknzr = TweetTokenizer()
+
+    tokens = [tknzr.tokenize(d[0]) for d in data]
+    tokens = [[t.lower() for t in tl] for tl in tokens]
+    tokens = [[t for t in tl if not (t[0] == '#' or t[0] == '@')] for tl in tokens]
+
+    is_oov = [True if any(t not in vocab for t in tl) else False for tl in tokens]
+    is_oov = {k[0]:is_oov[i] for i, k in enumerate(data)}
+
+    return is_oov
+
+def main():
+    vocab = load_vocab()
+    print('Vocabulary:', len(vocab))
+
+    data_dir = '../../data/cleaned_tweets/'
+    data = load_hashtags(data_dir)
 
     hashtags = sorted(data.keys())
     data = [data[h] for h in hashtags]
     nb_hashtags = len(hashtags)
     print('Hashtags:', nb_hashtags)
 
+    mode = 'not_oov'
     nb_epoch = 1
 
     acc_sum = 0
     total_pairs = 0
     accs = []
 
-    for i in range(nb_hashtags): # nb_hashtags
+    for i in range(nb_hashtags):  # nb_hashtags
         print('Starting hashtag {}/{} {}'.format(i + 1, nb_hashtags, hashtags[i]))
         data_test = data[i]
-        data_train = data[:i] + data[i+1:]
+        data_train = data[:i] + data[i + 1:]
+
+        is_oov_test = get_is_oov(data_test, vocab)
+        print('OOV stats:', sum(is_oov_test.values()), len(is_oov_test))
 
         character_set = sorted(set([c for d in data_train for t in d for c in t[0]]))
-        char2idx = {c: i+1 for i, c in enumerate(character_set)}
+        char2idx = {c: i + 1 for i, c in enumerate(character_set)}
         print('Characters:', len(char2idx))
 
         samples_train = [t for d in data_train for t in create_pairwise_data(d)]
-        samples_test = create_pairwise_data(data_test)
+        samples_test = create_pairwise_data(data_test, mode=mode, is_ovv=is_oov_test)
 
-        max_len = max(max([max(len(d[0]),len(d[1])) for d in samples_train]), max([max(len(d[0]),len(d[1])) for d in samples_test]))
+        max_len = max(max([max(len(d[0]), len(d[1])) for d in samples_train]),
+                      max([max(len(d[0]), len(d[1])) for d in samples_test]))
         input_dim = len(character_set) + 1
 
         print('Max len', max_len)
@@ -224,12 +286,13 @@ def main():
         acc_sum += acc * nb_test
         total_pairs += nb_test
 
-
     weighted_acc = acc_sum / total_pairs
     gt_05 = len([a for a in accs if a >= 0.5])
     min_acc = min(accs)
     max_acc = max(accs)
-    print('Weighted Accuracy: {}, % > 0.5: {}, Min Accuracy: {}, Max Accuracy: {}'.format(weighted_acc, 100 * gt_05 / nb_hashtags, min_acc, max_acc))
+    print('Weighted Accuracy: {}, % > 0.5: {}, Min Accuracy: {}, Max Accuracy: {}'.format(weighted_acc,
+                                                                                          100 * gt_05 / nb_hashtags,
+                                                                                          min_acc, max_acc))
 
 
 if __name__ == '__main__':
