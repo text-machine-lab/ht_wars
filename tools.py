@@ -128,3 +128,15 @@ def get_hashtag_file_names(tweet_pairs_dir):
     random.shuffle(g)
     return g
 
+
+def load_hashtag_data(directory, hashtag_name):
+    """Load first tweet, second tweet, and
+    tweet pair winner label for the hashtag file.
+    Example hashtag: America_In_4_Words"""
+    #print 'Loading hashtag data for %s' % hashtag_name
+    np_first_tweets = np.load(open(directory + hashtag_name + '_first_tweet_glove.npy', 'rb'))
+    first_tweet_ids = pickle.load(open(directory + hashtag_name + '_first_tweet_ids.cpkl', 'rb'))
+    np_second_tweets = np.load(open(directory + hashtag_name + '_second_tweet_glove.npy', 'rb'))
+    second_tweet_ids = pickle.load(open(directory + hashtag_name + '_second_tweet_ids.cpkl', 'rb'))
+    np_labels = np.load(open(directory + hashtag_name + '_label.npy', 'rb'))
+    return np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids

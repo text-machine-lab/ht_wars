@@ -5,6 +5,7 @@ import numpy as np
 import cPickle as pickle
 from tools import convert_words_to_indices
 from tools import invert_dictionary
+from tools import load_hashtag_data
 from config import CHAR_2_PHONE_MODEL_DIR
 
 GPU_OPTIONS = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
@@ -128,3 +129,17 @@ def generate_phonetic_embs_from_words(words, char_to_index_path, phone_to_index_
     print np.mean(np.abs(np_phonetic_emb))
 
     return np_phonetic_emb
+
+
+def predict_on_hashtag(sess, model_vars, hashtag_name, hashtag_dir):
+    """Predicts on a hashtag. Returns the accuracy of predictions on all tweet pairs and returns
+    a list. The list contains the predictions on all tweet pairs, and tweet ids for the first and second tweets in
+    each pair."""
+    print 'Predicting on hashtag %s' % hashtag_name
+    [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_ratings, tf_batch_size] = model_vars
+    np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids = load_hashtag_data(hashtag_dir, hashtag_name)
+    np_predictions = sess.run(tf_predictions, feed_dict={tf_first_input_tweets: np_first_tweets,
+                                                         tf_second_input_tweets: np_second_tweets,
+                                                         tf_batch_size: np_first_tweets.shape[0]})
+    accuracy = np.mean(np_predictions == np_labels)
+    return accuracy, [np_predictions, first_tweet_ids, second_tweet_ids]
