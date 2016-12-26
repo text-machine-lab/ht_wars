@@ -11,8 +11,8 @@ GPU_OPTIONS = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
 
 MAX_WORD_SIZE = 20
 MAX_PRONUNCIATION_SIZE = 20
-CHAR_EMB_DIM = 30
-LSTM_EMB_DIM = 400
+PHONE_CHAR_EMB_DIM = 30
+PHONE_ENCODER_LSTM_EMB_DIM = 200
 
 
 def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
@@ -25,9 +25,9 @@ def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
         tf_batch_size = tf.placeholder(tf.int32, name='batch_size')
         tf_words = tf.placeholder(tf.int32, [None, MAX_WORD_SIZE], 'words')
         # Lookup up embeddings for all characters in each word.
-        tf_char_emb = tf.Variable(tf.random_normal([char_vocab_size, CHAR_EMB_DIM]), name='character_emb')
+        tf_char_emb = tf.Variable(tf.random_normal([char_vocab_size, PHONE_CHAR_EMB_DIM]), name='character_emb')
         # Insert each character one by one into an LSTM.
-        lstm = tf.nn.rnn_cell.LSTMCell(num_units=LSTM_EMB_DIM, state_is_tuple=True)
+        lstm = tf.nn.rnn_cell.LSTMCell(num_units=PHONE_ENCODER_LSTM_EMB_DIM, state_is_tuple=True)
         encoder_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
         for i in range(MAX_WORD_SIZE):
             tf_char_embedding = tf.nn.embedding_lookup(tf_char_emb, tf_words[:, i])
@@ -37,8 +37,8 @@ def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
                     lstm_scope.reuse_variables()
                 encoder_output, encoder_hidden_state = lstm(tf_char_embedding, encoder_hidden_state)
         # Run encoder output through dense layer to process output
-        tf_encoder_output_w = tf.Variable(tf.random_normal([LSTM_EMB_DIM, LSTM_EMB_DIM]), name='encoder_output_emb')
-        tf_encoder_output_b = tf.Variable(tf.random_normal([LSTM_EMB_DIM]), name='encoder_output_bias')
+        tf_encoder_output_w = tf.Variable(tf.random_normal([PHONE_ENCODER_LSTM_EMB_DIM, PHONE_ENCODER_LSTM_EMB_DIM]), name='encoder_output_emb')
+        tf_encoder_output_b = tf.Variable(tf.random_normal([PHONE_ENCODER_LSTM_EMB_DIM]), name='encoder_output_bias')
         encoder_output_emb = tf.matmul(encoder_output, tf_encoder_output_w) + tf_encoder_output_b
 
         decoder_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
@@ -66,6 +66,22 @@ def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
     #     print ' - ', model_variable.name
 
     return [tf_words, tf_batch_size], [tf_phonemes, encoder_output_emb]
+
+
+def create_dense_layer(input_layer, input_size, output_size, activation=None):
+    tf_w = tf.Variable(tf.random_normal([input_size, output_size], stddev=.1))
+    tf_b = tf.Variable(tf.random_normal([output_size]))
+    output_layer = tf.matmul(input_layer, tf_w) + tf_b
+    if activation == 'relu':
+        output_layer = tf.nn.relu(output_layer)
+    elif activation == 'sigmoid':
+        output_layer = tf.nn.sigmoid(output_layer)
+    elif activation is None:
+        pass
+    else:
+        print 'Did not specify layer activation'
+
+    return output_layer, tf_w, tf_b
 
 
 def generate_phonetic_embs_from_words(words, char_to_index_path, phone_to_index_path):

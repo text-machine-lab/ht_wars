@@ -7,17 +7,22 @@ This model will be built in Tensorflow."""
 import tensorflow as tf
 import numpy as np
 import random
+import os
 from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
 from config import HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR
+from config import EMBEDDING_HUMOR_MODEL_DIR
 from tools import HUMOR_MAX_WORDS_IN_TWEET
 from config import SEMEVAL_HUMOR_TRAINING_DIR
 from config import SEMEVAL_HUMOR_TRIAL_DIR
+from tools import GLOVE_SIZE
+from tools import PHONETIC_EMB_SIZE
 from tools import get_hashtag_file_names
 from tf_tools import GPU_OPTIONS
+from tf_tools import create_dense_layer
 
 
-GLOVE_SIZE = 200
-EMBEDDING_HUMOR_MODEL_LEARNING_RATE = 0.005
+EMBEDDING_HUMOR_MODEL_LEARNING_RATE = .00005
+DROPOUT = 1  # Off
 
 
 def main():
@@ -30,8 +35,9 @@ def main():
     testing_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRIAL_DIR)
     accuracies = []
 
-    sess, training_accuracy = train_on_all_other_hashtags(model_vars, trainer_vars, training_hashtag_names, '', n_epochs=1)  # Blank hashtag means train on all training hashtags
+    sess, training_accuracy = train_on_all_other_hashtags(model_vars, trainer_vars, training_hashtag_names, '', n_epochs=20)  # Blank hashtag '' means train on all training hashtags
     print 'Mean training accuracy: %s' % training_accuracy
+    print
     for hashtag_name in testing_hashtag_names:
         accuracy = predict_on_hashtag(sess, model_vars, hashtag_name, HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR)
         print 'Hashtag %s accuracy: %s' % (hashtag_name, accuracy)
@@ -44,20 +50,18 @@ def main():
 def build_embedding_humor_model():
     print 'Building embedding humor model'
     tf_batch_size = tf.placeholder(tf.int32, name='batch_size')
+    word_embedding_size = GLOVE_SIZE + PHONETIC_EMB_SIZE
     # Output of two, allowing the model to choose which is funnier, the left or the right tweet.
-    tf_first_input_tweets = tf.placeholder(dtype=tf.float32, shape=[None, HUMOR_MAX_WORDS_IN_TWEET * GLOVE_SIZE], name='first_tweets')
-    tf_second_input_tweets = tf.placeholder(dtype=tf.float32, shape=[None, HUMOR_MAX_WORDS_IN_TWEET * GLOVE_SIZE], name='second_tweets')
+    tf_first_input_tweets = tf.placeholder(dtype=tf.float32, shape=[None, HUMOR_MAX_WORDS_IN_TWEET * word_embedding_size], name='first_tweets')
+    tf_second_input_tweets = tf.placeholder(dtype=tf.float32, shape=[None, HUMOR_MAX_WORDS_IN_TWEET * word_embedding_size], name='second_tweets')
 
     toggle_LSTM_True_Dense_False = True  # Toggles between actual LSTM model and dummy dense layer model (the latter is used for debugging purposes)
     # START MODEL HIDDEN LAYERS #
     if toggle_LSTM_True_Dense_False:
-        lstm = tf.nn.rnn_cell.LSTMCell(num_units=GLOVE_SIZE * 2, state_is_tuple=True)
+        lstm = tf.nn.rnn_cell.LSTMCell(num_units=word_embedding_size * 4, state_is_tuple=True)
         tf_first_tweet_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
         for i in range(HUMOR_MAX_WORDS_IN_TWEET):
-            #tf_first_tweet_current_word = tf_first_input_tweets[:, i * GLOVE_SIZE: i * GLOVE_SIZE + GLOVE_SIZE]
             tf_first_tweet_current_word = tf.slice(tf_first_input_tweets, [0, i * GLOVE_SIZE], [-1, GLOVE_SIZE])
-            print 'tf_first_input_tweets: %s' % str(tf_first_input_tweets.get_shape())
-            print 'tf_first_tweet_current_word: %s' % str(tf_first_tweet_current_word.get_shape())
             with tf.variable_scope('TWEET_ENCODER') as lstm_scope:
                 if i > 0:
                     lstm_scope.reuse_variables()
@@ -65,29 +69,33 @@ def build_embedding_humor_model():
 
         tf_second_tweet_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
         for i in range(HUMOR_MAX_WORDS_IN_TWEET):
-            #tf_second_tweet_current_word = tf_first_input_tweets[:, i * GLOVE_SIZE:i * GLOVE_SIZE + GLOVE_SIZE]
             tf_second_tweet_current_word = tf.slice(tf_second_input_tweets, [0, i * GLOVE_SIZE], [-1, GLOVE_SIZE])
             with tf.variable_scope('TWEET_ENCODER', reuse=True):
                 tf_second_tweet_encoder_output, tf_second_tweet_hidden_state = lstm(tf_second_tweet_current_word, tf_second_tweet_hidden_state)
 
         tweet_output_size = int(tf_first_tweet_encoder_output.get_shape()[1])
-        print tweet_output_size
-        tf_w_tweet_layer1 = tf.Variable(tf.random_normal([tweet_output_size, 1]), dtype=tf.float32, name='w_layer1')
-        tf_b_tweet_layer1 = tf.Variable(tf.random_normal([1]), dtype=tf.float32, name='b_layer1')
 
-        tf_first_tweet_humor_ratings = tf.matmul(tf_first_tweet_encoder_output, tf_w_tweet_layer1) + tf_b_tweet_layer1
-        tf_second_tweet_humor_ratings = tf.matmul(tf_second_tweet_encoder_output, tf_w_tweet_layer1) + tf_b_tweet_layer1
+        tf_first_tweet_humor_ratings = tf_first_tweet_encoder_output
+        tf_second_tweet_humor_ratings = tf_second_tweet_encoder_output
     else:
-        tf_w_test_embedding_layer = tf.Variable(tf.random_normal([HUMOR_MAX_WORDS_IN_TWEET * GLOVE_SIZE, 1]), dtype=tf.float32, name='w_dummy_emb')
-        tf_b_test_embedding_layer = tf.Variable(tf.random_normal([1]), dtype=tf.float32, name='b_dummy_emb')
+        # May no longer work properly
+        tf_w_test_embedding_layer = tf.Variable(tf.random_normal([HUMOR_MAX_WORDS_IN_TWEET * word_embedding_size, 100]), dtype=tf.float32, name='w_dummy_emb')
+        tf_b_test_embedding_layer = tf.Variable(tf.random_normal([100]), dtype=tf.float32, name='b_dummy_emb')
 
         tf_first_tweet_humor_ratings = tf.matmul(tf_first_input_tweets, tf_w_test_embedding_layer) + tf_b_test_embedding_layer
         tf_second_tweet_humor_ratings = tf.matmul(tf_second_input_tweets, tf_w_test_embedding_layer) + tf_b_test_embedding_layer
 
-    # END MODEL HIDDEN LAYERS #
+    tf_tweet_pair_emb = tf.concat(1, [tf_first_tweet_humor_ratings, tf_second_tweet_humor_ratings])
 
-    tf_tweet_humor_ratings = tf.concat(1, [tf_first_tweet_humor_ratings, tf_second_tweet_humor_ratings])
+    tweet_pair_emb_size = int(tf_tweet_pair_emb.get_shape()[1])
+    # # END MODEL HIDDEN LAYERS #
+
+    tf_tweet_dense_layer1, _, _ = create_dense_layer(tf_tweet_pair_emb, tweet_pair_emb_size, tweet_pair_emb_size * 3 / 4, activation='relu')
+    tf_tweet_dense_layer1_dropout = tf.nn.dropout(tf_tweet_dense_layer1, keep_prob=DROPOUT)
+    tf_tweet_dense_layer2, _, _ = create_dense_layer(tf_tweet_dense_layer1_dropout, tweet_pair_emb_size * 3 / 4, tweet_pair_emb_size / 2, activation='relu')
+    tf_tweet_humor_ratings, _, _ = create_dense_layer(tf_tweet_dense_layer2, tweet_pair_emb_size / 2, 2)
     tf_predictions = tf.argmax(tf_tweet_humor_ratings, 1, name='prediction')
+
     return [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_ratings, tf_batch_size]
 
 
@@ -104,6 +112,8 @@ def build_embedding_humor_model_trainer(model_vars):
 
 
 def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag_name, n_epochs=1):
+    if not os.path.exists(EMBEDDING_HUMOR_MODEL_DIR):
+        os.makedirs(EMBEDDING_HUMOR_MODEL_DIR)
     batch_size = 50
     [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_ratings, tf_batch_size] = model_vars
     [tf_loss, tf_labels] = trainer_vars
@@ -154,7 +164,11 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
                 starting_training_example += batch_size
             else:
                 print 'Do not train on current hashtag: %s' % trainer_hashtag_name
+        saver.save(sess, os.path.join(EMBEDDING_HUMOR_MODEL_DIR, 'emb_humor_model'), global_step=epoch)  # Save model after every epoch
+
     training_accuracy = np.mean(accuracies)
+
+    # Save trained model.
 
     return sess, training_accuracy
 

@@ -93,11 +93,13 @@ class HashtagWarsCharacterModel:
         # Two tweets as input. Run them through an embedding layer
         tweet1 = Input(shape=[self.tweet_size])
         tweet2 = Input(shape=[self.tweet_size])
+
+        tweet1[i] and tweet2[i]  # tweet pair
         
         tweet_input_emb_lookup = Embedding(self.vocab_size, tweet_emb_dim, input_length=self.tweet_size)
         tweet1_emb = tweet_input_emb_lookup(tweet1)
         tweet2_emb = tweet_input_emb_lookup(tweet2)
-        
+
         # Run both tweets separately through convolution layers, a max pool layer, 
         # and then flatten them for dense layer.
         convolution_layer_1 = Convolution1D(num_filters_1, filter_size_1, input_shape=[self.tweet_size, self.vocab_size])

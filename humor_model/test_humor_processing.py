@@ -6,7 +6,8 @@ from humor_processing import build_vocabulary
 from humor_processing import format_text_with_hashtag
 from humor_processing import load_tweets_from_hashtag
 from humor_processing import look_up_glove_embeddings
-from humor_processing import convert_tweet_to_gloves
+from humor_processing import convert_tweet_to_embeddings
+from humor_processing import create_dictionary_mapping
 from tools import HUMOR_MAX_WORDS_IN_TWEET
 from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
 from config import DATA_DIR
@@ -16,10 +17,20 @@ def main():
     test_build_vocabulary()
     test_format_text_with_hashtag()
     test_load_tweets_from_hashtag()
-    test_look_up_glove_embeddings_and_convert_tweets_to_gloves()
+    # test_look_up_glove_embeddings_and_convert_tweets_to_gloves()
     test_saved_files()
+    test_create_dictionary_mapping()
 
     print 'Tests successful'
+
+
+def test_create_dictionary_mapping():
+    list1 = ['apple', 'banana', 'orange']
+    list2 = ['one', 'two', 'three']
+    mapping = create_dictionary_mapping(list1, list2)
+    assert mapping['apple'] == 'one'
+    assert mapping['banana'] == 'two'
+    assert mapping['orange'] == 'three'
 
 
 def test_saved_files():
@@ -36,13 +47,13 @@ def test_saved_files():
     np_first_tweets = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_first_tweet_glove.npy'))
     np_second_tweets = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_second_tweet_glove.npy'))
     np_winner_labels = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_label.npy'))
+
     assert np_first_tweets.shape == np_second_tweets.shape
     assert np_winner_labels.shape[0] == np_first_tweets.shape[0]
     assert len(index_to_word) >= len(word_to_glove)
     assert len(word_to_glove) > 0
     for key in word_to_glove:
         assert key in index_to_word
-
 
 
 def test_look_up_glove_embeddings_and_convert_tweets_to_gloves():
@@ -54,7 +65,7 @@ def test_look_up_glove_embeddings_and_convert_tweets_to_gloves():
     assert np.dot(np_apple_glove, np_banana_glove) > np.dot(np_apple_glove, np_car_glove)
     assert np.dot(np_apple_glove, np_banana_glove) > np.dot(np_banana_glove, np_car_glove)
 
-    np_converted_glove = convert_tweet_to_gloves(['apple banana'], word_to_glove, HUMOR_MAX_WORDS_IN_TWEET, 200)
+    np_converted_glove = convert_tweet_to_embeddings(['apple banana'], word_to_glove, HUMOR_MAX_WORDS_IN_TWEET, 200)
     assert np.array_equal(np_converted_glove[0, :200], np_apple_glove)
     assert np.array_equal(np_converted_glove[0, 200:400], np_banana_glove)
     assert np.array_equal(np_converted_glove[0, 400:600], np.zeros([200]))
