@@ -93,8 +93,6 @@ class HashtagWarsCharacterModel:
         # Two tweets as input. Run them through an embedding layer
         tweet1 = Input(shape=[self.tweet_size])
         tweet2 = Input(shape=[self.tweet_size])
-
-        tweet1[i] and tweet2[i]  # tweet pair
         
         tweet_input_emb_lookup = Embedding(self.vocab_size, tweet_emb_dim, input_length=self.tweet_size)
         tweet1_emb = tweet_input_emb_lookup(tweet1)
