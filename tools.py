@@ -7,9 +7,11 @@ import numpy as np
 import cPickle as pickle
 import random
 import csv
+import nltk
 
 
 HUMOR_MAX_WORDS_IN_TWEET = 20  # All winning tweets are under 30 words long
+HUMOR_MAX_WORDS_IN_HASHTAG = 8
 GLOVE_SIZE = 200
 PHONETIC_EMB_SIZE = 200
 
@@ -29,6 +31,22 @@ def extract_tweet_pairs_from_file(hashtag_file):
             tweets.append(line[1])
             tweet_ranks.append(int(line[2]))
     return extract_tweet_pairs(tweets, tweet_ranks)
+
+
+def remove_hashtag_from_tweets(tweets):
+    tweets_without_hashtags = []
+    for tweet in tweets:
+        tweet_without_hashtags = ''
+        outside_hashtag = True
+        for char in tweet:
+            if char == '#':
+                outside_hashtag = False
+            if outside_hashtag:
+                tweet_without_hashtags += char
+            if not outside_hashtag and char == ' ':
+                outside_hashtag = True
+        tweets_without_hashtags.append(tweet_without_hashtags)
+    return tweets_without_hashtags
 
 
 def extract_tweet_pairs(tweets, tweet_ranks, tweet_ids):
@@ -77,6 +95,58 @@ def extract_tweet_pairs(tweets, tweet_ranks, tweet_ids):
             else:
                 pairs.append([top_ten_tweet, top_ten_id, winning_tweet, winning_id, 0])
     return pairs
+
+
+def format_text_with_hashtag(text, hashtag_replace=None):
+    """Remove hashtag from text."""
+    # If you hit a hashtag symbol, you are inside a hashtag.
+    # While inside hashtag, don't add characters to output.
+    # You are no longer inside a hashtag if you encounter a space (don't add space to output).
+    formatted_text = ''
+    formatted_hashtag = ''
+    inside_hashtag = False
+    for i in range(len(text)):
+        if text[i] == '#':
+            inside_hashtag = True
+            continue
+        if inside_hashtag:
+            if hashtag_replace is None:
+                if text[i].isupper():
+                    formatted_hashtag += ' '
+                if not text[i].isalpha() and text[i-1].isalpha():
+                    formatted_hashtag += ' '
+                formatted_hashtag += text[i]
+        else:
+            if text[i].isalpha() or text[i] == ' ' or text[i] == '@':
+                formatted_text += text[i]
+        if text[i] == ' ':
+            inside_hashtag = False
+    if hashtag_replace is not None:
+        formatted_hashtag += hashtag_replace
+    raw_output = (formatted_hashtag + ' # ' + formatted_text).lower()
+    return ' '.join(raw_output.split())
+
+
+
+def load_tweets_from_hashtag(filename, explicit_hashtag=None):
+    tweet_ids = []
+    tweets = []
+    labels = []
+    # Open hashtag file line for line. File is tsv.
+    # Tweet is second variable, tweet win/top10/lose status is third variable
+    # Replace any Twitter hashtag with a '$'
+    with open(filename, 'rb') as f:
+        tsvread = csv.reader(f, delimiter='\t')
+        for line in tsvread:
+            id = line[0]
+            tweet = line[1]
+            formatted_tweet = format_text_with_hashtag(tweet, hashtag_replace=explicit_hashtag)
+            tweet_tokens = nltk.word_tokenize(formatted_tweet)
+            tweet_ids.append(int(id))
+            tweets.append(' '.join(tweet_tokens).lower())
+            labels.append(int(line[2]))
+
+    return tweets, labels, tweet_ids
 
 
 def convert_words_to_indices(words, char_to_index, max_word_size=20):
@@ -140,3 +210,22 @@ def load_hashtag_data(directory, hashtag_name):
     second_tweet_ids = pickle.load(open(directory + hashtag_name + '_second_tweet_ids.cpkl', 'rb'))
     np_labels = np.load(open(directory + hashtag_name + '_label.npy', 'rb'))
     return np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids
+
+
+def expected_value(np_prob):
+    weighted_sum = 0.0
+    for i in range(np_prob.size):
+        weighted_sum += i * np_prob[i]
+    return weighted_sum / np.sum(np_prob)
+
+
+def find_indices_larger_than_threshold(np_x, n):
+    """Returns indices into array np_x, where the value
+    at each index is larger than the threshold n."""
+    largest_value_indices = []
+
+    for index in range(0, np_x.size):
+        if np_x[index] > n:
+            largest_value_indices.append(index)
+    return largest_value_indices
+

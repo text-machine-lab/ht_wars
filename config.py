@@ -7,10 +7,11 @@ try:
 except ImportError:
     pass
 
+TWEET_PAIR_LABEL_RANDOM_SEED = 'hello world'
 
 WORD_VECTORS_FILE_PATH = os.path.join(DATA_DIR, 'glove.twitter.27B/glove.twitter.27B.200d.txt')
 
-SEMEVAL_HUMOR_TRAINING_DIR = os.path.join(DATA_DIR, 'train_dir/train_data/')
+SEMEVAL_HUMOR_TRAIN_DIR = os.path.join(DATA_DIR, 'train_dir/train_data/')
 SEMEVAL_HUMOR_TRIAL_DIR = os.path.join(DATA_DIR, 'trial_dir/trial_data/')
 
 CMU_SYMBOLS_FILE_PATH = os.path.join(DATA_DIR, 'cmudict-0.7b.symbols.txt')
@@ -33,3 +34,5 @@ HUMOR_WORD_TO_PHONETIC_FILE_PATH = os.path.join(DATA_DIR, 'humor_word_to_phoneti
 HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR = os.path.join(DATA_DIR, 'training_tweet_pair_embeddings/')
 HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR = os.path.join(DATA_DIR, 'trial_tweet_pair_embeddings/')
 
+BOOST_TREE_TWEET_PAIR_TRAINING_DIR = os.path.join(DATA_DIR, 'training_tweet_pair_tree_data/')
+BOOST_TREE_TWEET_PAIR_TESTING_DIR = os.path.join(DATA_DIR, 'testing_tweet_pair_tree_data/')

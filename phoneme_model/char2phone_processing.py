@@ -83,7 +83,7 @@ def build_character_vocabulary_from_cmu():
     characters.append('')
     with open(CMU_DICTIONARY_FILE_PATH) as f:
         for line in f:
-            if line[0].isalpha(): # All lines with ; are comments, ignore them
+            if line[0] != ';':  # All lines with ; are comments, ignore them
                 word, pronunciation = extract_word_and_pronunciation_from_line(line)
                 for char in word:
                     if char != '\n':
@@ -100,7 +100,7 @@ def get_number_of_word_pronunciation_pairs():
     num_pairs = 0
     with open(CMU_DICTIONARY_FILE_PATH) as f:
         for line in f:
-            if line[0].isalpha(): # All lines with ; are comments
+            if line[0] != ';': # All lines with ; are comments
                 # Valid pair. Count this one.
                 num_pairs += 1
     return num_pairs
@@ -131,7 +131,7 @@ def extract_CMU_words_and_pronunciations_in_index_format(char_to_index, phone_to
     with open(CMU_DICTIONARY_FILE_PATH) as f:
         counter = 0
         for line in f:
-            if line[0].isalpha(): # All lines with ; are comments, ignore them.
+            if line[0] != ';': # All lines with ; are comments, ignore them.
                 word, pronunciation = extract_word_and_pronunciation_from_line(line)
                 for i in range(len(word)):
                     if i < MAX_WORD_SIZE:

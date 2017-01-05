@@ -6,16 +6,19 @@ For each hashtag, it will generate and save a numpy array for each tweet. The nu
 be shaped m x n x e where m is the number of tweet pairs in the hashtag, n is the max tweet size and
 e is the concatenated size of both the phonetic and glove embeddings."""
 from tools import get_hashtag_file_names
-from config import SEMEVAL_HUMOR_TRAINING_DIR
+from config import SEMEVAL_HUMOR_TRAIN_DIR
 from config import SEMEVAL_HUMOR_TRIAL_DIR
 from config import WORD_VECTORS_FILE_PATH
 from config import HUMOR_INDEX_TO_WORD_FILE_PATH
 from config import HUMOR_WORD_TO_GLOVE_FILE_PATH
 from config import HUMOR_WORD_TO_PHONETIC_FILE_PATH
+from config import TWEET_PAIR_LABEL_RANDOM_SEED
 from tools import extract_tweet_pairs
 from tools import HUMOR_MAX_WORDS_IN_TWEET
+from tools import HUMOR_MAX_WORDS_IN_HASHTAG
 from tools import GLOVE_SIZE
 from tools import PHONETIC_EMB_SIZE
+from tools import load_tweets_from_hashtag
 from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
 from config import HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR
 from config import CMU_CHAR_TO_INDEX_FILE_PATH
@@ -23,10 +26,9 @@ from config import CMU_PHONE_TO_INDEX_FILE_PATH
 from tf_tools import generate_phonetic_embs_from_words
 import os
 import sys
-import csv
-import nltk
 import cPickle as pickle
 import numpy as np
+import random
 
 
 def main():
@@ -34,54 +36,63 @@ def main():
     if not len(sys.argv) > 1:
         print 'Please specify argument: vocabulary|tweet_pairs'
 
-    elif sys.argv[1] == 'vocabulary' or sys.argv[1] == 'all':
-        """For all hashtags, for the first and second tweet in all tweet pairs separately,
-        for all words in the tweet, look up a glove embedding and generate a phonetic embedding.
-        Save everything."""
-        print 'Creating vocabulary, phonetic embedding and GloVe mappings (may take a while)'
-        train_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRAINING_DIR)
-        vocabulary = []
-        for hashtag_name in train_hashtag_names:
-            tweets, labels = load_tweets_from_hashtag(SEMEVAL_HUMOR_TRAINING_DIR + hashtag_name + '.tsv')
-            vocabulary = build_vocabulary(tweets, vocabulary=vocabulary)
+    else:
+        if sys.argv[1] == 'vocabulary' or sys.argv[1] == 'all':
+            create_vocabulary_and_glove_phonetic_mappings()
+        if sys.argv[1] == 'tweet_pairs' or sys.argv[1] == 'all':
+            """Load vocabulary created from vocabulary step. Load tweets
+            and create tweet pairs using winner/top10/loser labels. Split tweet pairs into
+            first tweet, second tweet, and first_tweet_funnier label. Convert all left tweets
+            and all right tweets into glove embeddings per word. Save numpy array for left tweets,
+            right tweets, and labels. Do this for both training and trial datasets, and save both."""
+            print 'Creating tweet pairs (may take a while)'
+            convert_all_tweets_to_tweet_pairs_represented_by_glove_and_phonetic_embeddings()
 
-        test_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRIAL_DIR)
-        for hashtag_name in test_hashtag_names:
-            tweets, labels = load_tweets_from_hashtag(SEMEVAL_HUMOR_TRIAL_DIR + hashtag_name + '.tsv')
-            vocabulary = build_vocabulary(tweets, vocabulary=vocabulary)
 
-        word_to_glove = look_up_glove_embeddings(vocabulary)
-        index_to_phonetic = generate_phonetic_embs_from_words(vocabulary, CMU_CHAR_TO_INDEX_FILE_PATH, CMU_PHONE_TO_INDEX_FILE_PATH)
-        word_to_phonetic = create_dictionary_mapping(vocabulary, index_to_phonetic)
-        print 'Size of vocabulary: %s' % len(vocabulary)
-        print 'Number of GloVe vectors found: %s' % len(word_to_glove)
-        print 'Size of a GloVe vector: %s' % len(word_to_glove['#'])
-        print 'Size of a phonetic embedding: %s' % len(word_to_phonetic['#'])
-        print 'Saving %s' % HUMOR_INDEX_TO_WORD_FILE_PATH
-        pickle.dump(vocabulary, open(HUMOR_INDEX_TO_WORD_FILE_PATH, 'wb'))
-        print 'Saving %s' % HUMOR_WORD_TO_GLOVE_FILE_PATH
-        pickle.dump(word_to_glove, open(HUMOR_WORD_TO_GLOVE_FILE_PATH, 'wb'))
-        print 'Saving %s' % HUMOR_WORD_TO_PHONETIC_FILE_PATH
-        pickle.dump(word_to_phonetic, open(HUMOR_WORD_TO_PHONETIC_FILE_PATH, 'wb'))
+def convert_all_tweets_to_tweet_pairs_represented_by_glove_and_phonetic_embeddings():
+    vocabulary = pickle.load(open(HUMOR_INDEX_TO_WORD_FILE_PATH, 'rb'))
+    word_to_glove = pickle.load(open(HUMOR_WORD_TO_GLOVE_FILE_PATH, 'rb'))
+    word_to_phonetic = pickle.load(open(HUMOR_WORD_TO_PHONETIC_FILE_PATH, 'rb'))
+    convert_tweets_to_embedding_tweet_pairs(word_to_glove,
+                                            word_to_phonetic,
+                                            SEMEVAL_HUMOR_TRAIN_DIR,
+                                            HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR)
+    convert_tweets_to_embedding_tweet_pairs(word_to_glove,
+                                            word_to_phonetic,
+                                            SEMEVAL_HUMOR_TRIAL_DIR,
+                                            HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR)
 
-    elif sys.argv[1] == 'tweet_pairs' or sys.argv[1] == 'all':
-        """Load vocabulary created from vocabulary step. Load tweets
-        and create tweet pairs using winner/top10/loser labels. Split tweet pairs into
-        left tweet, right tweet, and left-right-funnier label. Convert all left tweets
-        and all right tweets into glove embeddings per word. Save numpy array for left tweets,
-        right tweets, and labels. Do this for both training and trial datasets, and save both."""
-        print 'Creating tweet pairs (may take a while)'
-        vocabulary = pickle.load(open(HUMOR_INDEX_TO_WORD_FILE_PATH, 'rb'))
-        word_to_glove = pickle.load(open(HUMOR_WORD_TO_GLOVE_FILE_PATH, 'rb'))
-        word_to_phonetic = pickle.load(open(HUMOR_WORD_TO_PHONETIC_FILE_PATH, 'rb'))
-        convert_tweets_to_embedding_tweet_pairs(word_to_glove,
-                                                word_to_phonetic,
-                                                SEMEVAL_HUMOR_TRAINING_DIR,
-                                                HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR)
-        convert_tweets_to_embedding_tweet_pairs(word_to_glove,
-                                                word_to_phonetic,
-                                                SEMEVAL_HUMOR_TRIAL_DIR,
-                                                HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR)
+
+def create_vocabulary_and_glove_phonetic_mappings():
+    """For all hashtags, for the first and second tweet in all tweet pairs separately,
+    for all words in the tweet, look up a glove embedding and generate a phonetic embedding.
+    Save everything."""
+    print 'Creating vocabulary, phonetic embeddings and GloVe mappings (may take a while)'
+    train_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRAIN_DIR)
+    vocabulary = []
+    for hashtag_name in train_hashtag_names:
+        tweets, labels, tweet_ids = load_tweets_from_hashtag(SEMEVAL_HUMOR_TRAIN_DIR + hashtag_name + '.tsv')
+        vocabulary = build_vocabulary(tweets, vocabulary=vocabulary)
+
+    test_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRIAL_DIR)
+    for hashtag_name in test_hashtag_names:
+        tweets, labels, tweet_ids = load_tweets_from_hashtag(SEMEVAL_HUMOR_TRIAL_DIR + hashtag_name + '.tsv')
+        vocabulary = build_vocabulary(tweets, vocabulary=vocabulary)
+
+    word_to_glove = look_up_glove_embeddings(vocabulary)
+    index_to_phonetic = generate_phonetic_embs_from_words(vocabulary, CMU_CHAR_TO_INDEX_FILE_PATH,
+                                                          CMU_PHONE_TO_INDEX_FILE_PATH)
+    word_to_phonetic = create_dictionary_mapping(vocabulary, index_to_phonetic)
+    print 'Size of vocabulary: %s' % len(vocabulary)
+    print 'Number of GloVe vectors found: %s' % len(word_to_glove)
+    print 'Size of a GloVe vector: %s' % len(word_to_glove['the'])
+    print 'Size of a phonetic embedding: %s' % len(word_to_phonetic['the'])
+    print 'Saving %s' % HUMOR_INDEX_TO_WORD_FILE_PATH
+    pickle.dump(vocabulary, open(HUMOR_INDEX_TO_WORD_FILE_PATH, 'wb'))
+    print 'Saving %s' % HUMOR_WORD_TO_GLOVE_FILE_PATH
+    pickle.dump(word_to_glove, open(HUMOR_WORD_TO_GLOVE_FILE_PATH, 'wb'))
+    print 'Saving %s' % HUMOR_WORD_TO_PHONETIC_FILE_PATH
+    pickle.dump(word_to_phonetic, open(HUMOR_WORD_TO_PHONETIC_FILE_PATH, 'wb'))
 
 
 def create_dictionary_mapping(first_list, second_list):
@@ -95,15 +106,22 @@ def create_dictionary_mapping(first_list, second_list):
 
 
 def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, tweet_input_dir, tweet_pair_output_dir):
+    """Create output directory if it doesn't exist. For all hashtags, generate tweet pairs from all tweets by comparing
+    winner with top-ten, top-ten with loser, and winner with loser tweets. Convert each word in each tweet of a tweet pair into
+    both a GloVe embedding and phonetic embedding. For each hashtag, produce a numpy array for the first tweet in each pair, produce
+    a numpy array for the second tweet in each pair, and produce a label array to tell which one is funnier (1 indicates first tweet is funnier).
+    For each row of each tweet vector, insert the GloVe and phonetic embeddings for each word, and insert padding up up to the max words in tweet."""
     if not os.path.exists(tweet_pair_output_dir):
         os.makedirs(tweet_pair_output_dir)
-    train_hashtag_names = get_hashtag_file_names(tweet_input_dir)
+    hashtag_names = get_hashtag_file_names(tweet_input_dir)
 
-    for hashtag_name in train_hashtag_names:
+    for hashtag_name in hashtag_names:
         print 'Loading hashtag: %s' % hashtag_name
-        tweets, labels, tweet_ids = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv')
+        formatted_hashtag_name = ' '.join(hashtag_name.split('_')).lower()
+        tweets, labels, tweet_ids = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv', explicit_hashtag=formatted_hashtag_name)
 
         print 'Generating tweet pairs'
+        random.seed(TWEET_PAIR_LABEL_RANDOM_SEED)
         tweet_pairs = extract_tweet_pairs(tweets, labels, tweet_ids)
         tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
         tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
@@ -112,11 +130,15 @@ def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, twe
         labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
         print 'For each tweet in pair, converting to GloVe/phonetic vector format'
         np_label = np.array(labels)
+        np_hashtag_gloves_col = convert_tweet_to_embeddings([formatted_hashtag_name], word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_SIZE, PHONETIC_EMB_SIZE)
+        np_hashtag_gloves = np.reshape(np_hashtag_gloves_col, [np_hashtag_gloves_col.shape[1]])
+        #print np_hashtag_gloves.T.shape
         np_tweet1_gloves = convert_tweet_to_embeddings(tweet1, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET, GLOVE_SIZE, PHONETIC_EMB_SIZE)
         np_tweet2_gloves = convert_tweet_to_embeddings(tweet2, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET, GLOVE_SIZE, PHONETIC_EMB_SIZE)
         # Save
         print 'Saving embedding vector tweet pairs with labels'
         np.save(open(tweet_pair_output_dir + hashtag_name + '_label.npy', 'wb'), np_label)
+        np.save(open(tweet_pair_output_dir + hashtag_name + '_hashtag.npy', 'wb'), np_hashtag_gloves)
         np.save(open(tweet_pair_output_dir + hashtag_name + '_first_tweet_glove.npy', 'wb'),
                 np_tweet1_gloves)
         pickle.dump(tweet1_id, open(tweet_pair_output_dir + hashtag_name + '_first_tweet_ids.cpkl', 'wb'))
@@ -152,21 +174,6 @@ def convert_tweet_to_embeddings(tweets, word_to_glove, word_to_phonetic, max_num
                     for k in range(phonetic_emb_size):
                         np_tweet_embs[i, j*word_embedding_size + glove_size + k] = np_token_phonetic[k]
 
-    # Test that input to model is correct.
-    # tweet5 = tweets[5]
-    # token3 = tweet5.split()[3]
-    # if token3 in word_to_glove and token3 in word_to_phonetic:
-    #     token3glove = np.array(word_to_glove[token3])
-    #     token3phonetic = np.array(word_to_phonetic[token3])
-    #     np_glove_emb3 = np_tweet_embs[5, 3 * word_embedding_size:3*word_embedding_size + glove_size]
-    #     np_phone_emb3 = np_tweet_embs[5, 3 * word_embedding_size+glove_size:3*word_embedding_size+glove_size+phonetic_emb_size]
-    #     print token3glove.shape
-    #     print token3phonetic.shape
-    #     print np_glove_emb3.shape
-    #     print np_phone_emb3.shape
-    #     assert np.equal(np_glove_emb3, token3glove).all()
-    #     assert np.equal(np_phone_emb3, token3phonetic).all()
-
     return np_tweet_embs
 
 
@@ -178,7 +185,7 @@ def look_up_glove_embeddings(index_to_word):
     with open(WORD_VECTORS_FILE_PATH, 'rb') as f:
         for line in f:
             line_tokens = line.split()
-            glove_word = line_tokens[0]
+            glove_word = line_tokens[0].lower()
             if glove_word in index_to_word:
                 glove_emb = [float(line_token) for line_token in line_tokens[1:]]
                 word_to_glove[glove_word] = glove_emb
@@ -190,50 +197,6 @@ def format_hashtag(hashtag_name):
     name_without_hashtag = hashtag_name.replace('#', '')
     hashtag_with_spaces = name_without_hashtag.replace('_', ' ')
     return hashtag_with_spaces.lower()
-
-
-def load_tweets_from_hashtag(filename):
-    tweet_ids = []
-    tweets = []
-    labels = []
-    # Open hashtag file line for line. File is tsv.
-    # Tweet is second variable, tweet win/top10/lose status is third variable
-    # Replace any Twitter hashtag with a '$'
-    with open(filename, 'rb') as f:
-        tsvread = csv.reader(f, delimiter='\t')
-        for line in tsvread:
-            id = line[0]
-            tweet = line[1]
-            formatted_tweet = format_text_with_hashtag(tweet)
-            tweet_tokens = nltk.word_tokenize(formatted_tweet)
-            tweet_ids.append(int(id))
-            tweets.append(' '.join(tweet_tokens).lower())
-            labels.append(int(line[2]))
-
-    return tweets, labels, tweet_ids
-
-
-def format_text_with_hashtag(text):
-    """Can only handle one hashtag in text."""
-    formatted_text = ''
-    inside_hashtag = False
-    for i in range(len(text)):
-        if text[i] == '#':
-            formatted_text = formatted_text + text[i]
-            inside_hashtag = True
-        elif inside_hashtag:
-            if text[i] == ' ' or i == len(text) - 1:
-                inside_hashtag = False
-                formatted_text = formatted_text + text[i] + '# '
-            elif i > 0 and not text[i-1].isalpha() and not text[i].isalpha():
-                formatted_text = formatted_text + text[i]
-            elif text[i].isupper() or not text[i].isalpha():
-                formatted_text = formatted_text + ' ' + text[i]
-            else:
-                formatted_text = formatted_text + text[i]
-        else:
-            formatted_text = formatted_text + text[i]
-    return formatted_text
 
 
 def build_vocabulary(lines, vocabulary=None, max_word_size=15):

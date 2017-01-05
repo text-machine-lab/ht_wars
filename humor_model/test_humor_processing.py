@@ -3,12 +3,15 @@
 import numpy as np
 import cPickle as pickle
 from humor_processing import build_vocabulary
-from humor_processing import format_text_with_hashtag
+from tools import format_text_with_hashtag
 from humor_processing import load_tweets_from_hashtag
 from humor_processing import look_up_glove_embeddings
 from humor_processing import convert_tweet_to_embeddings
 from humor_processing import create_dictionary_mapping
 from tools import HUMOR_MAX_WORDS_IN_TWEET
+from tools import GLOVE_SIZE
+from tools import PHONETIC_EMB_SIZE
+from tools import HUMOR_MAX_WORDS_IN_HASHTAG
 from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
 from config import DATA_DIR
 
@@ -40,14 +43,62 @@ def test_saved_files():
     have same dimensions. Checks that the winner label has
     same first dimension. Checks that index to word is
     larger size than word_to_glove, and all words in
-    word_to_glove are occur once and exist in index_to_word."""
+    word_to_glove are occur once and exist in index_to_word. Test
+    that hashtag"""
     example_hashtag = '420_Celebs'
     index_to_word = pickle.load(open(DATA_DIR + 'humor_index_to_word.cpkl', 'rb'))
     word_to_glove = pickle.load(open(DATA_DIR + 'humor_word_to_glove.cpkl', 'rb'))
+    word_to_phone = pickle.load(open(DATA_DIR + 'humor_word_to_phonetic.cpkl', 'rb'))
     np_first_tweets = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_first_tweet_glove.npy'))
     np_second_tweets = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_second_tweet_glove.npy'))
     np_winner_labels = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_label.npy'))
+    np_hashtag = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_hashtag.npy'))
 
+    # for i in range(np_first_tweets.shape[0]):
+    #     for j in range(HUMOR_MAX_WORDS_IN_TWEET):
+    #         current_tweet_glove = list(np_first_tweets[i, j*(GLOVE_SIZE+PHONETIC_EMB_SIZE):j*(GLOVE_SIZE+PHONETIC_EMB_SIZE)+GLOVE_SIZE])
+    #         word_exists_for_glove = False
+    #         for key in word_to_glove:
+    #             if word_to_glove[key] == current_tweet_glove:
+    #                 word_exists_for_glove = True
+    #                 print key,
+    #         if not word_exists_for_glove:
+    #             print '_',
+    #     print
+
+    for key1 in word_to_phone:
+        for key2 in word_to_phone:
+            if key1 != key2:
+                if np.array_equal(word_to_phone[key1], word_to_phone[key2]):
+                    print key1, key2
+                    print word_to_phone[key1][:5]
+
+    # for i in range(np_first_tweets.shape[0]):
+    #     for j in range(HUMOR_MAX_WORDS_IN_TWEET):
+    #         current_tweet_phone = list(np_first_tweets[i, j*(GLOVE_SIZE+PHONETIC_EMB_SIZE)+GLOVE_SIZE:j*(GLOVE_SIZE+PHONETIC_EMB_SIZE)+GLOVE_SIZE+PHONETIC_EMB_SIZE])
+    #         word_exists_for_phone = False
+    #         for key in word_to_phone:
+    #             if np.array_equal(word_to_phone[key], current_tweet_phone):
+    #                 print word_to_phone[key][:10]
+    #                 print current_tweet_phone[:10]
+    #                 word_exists_for_phone = True
+    #                 # print key,
+    #         if not word_exists_for_phone:
+    #             print '_',
+    #     print
+
+    assert '420' in index_to_word
+    assert 'celebs' in word_to_phone
+
+    print np.sum(np_hashtag)
+    first_word_glove = list(np_hashtag[400:600])
+    first_word_phonetic = list(np_hashtag[600:800])
+    print first_word_glove
+    print len(first_word_glove)
+    print len(first_word_phonetic)
+    print first_word_phonetic
+
+    assert list(np_hashtag.shape) == [(GLOVE_SIZE + PHONETIC_EMB_SIZE) * HUMOR_MAX_WORDS_IN_HASHTAG]
     assert np_first_tweets.shape == np_second_tweets.shape
     assert np_winner_labels.shape[0] == np_first_tweets.shape[0]
     assert len(index_to_word) >= len(word_to_glove)
@@ -72,9 +123,13 @@ def test_look_up_glove_embeddings_and_convert_tweets_to_gloves():
 
 
 def test_load_tweets_from_hashtag():
-    tweets, labels = load_tweets_from_hashtag('./test_hashtag_file.txt')
-    assert tweets == ['this is a text file containing a single hashtag # waste hard disk 2016 #']
-    assert labels == [1]
+    tweets, labels, tweet_ids = load_tweets_from_hashtag('./test_hashtag_file.txt')
+    print tweets[0]
+    print tweets[1]
+    assert tweets[0] == 'waste hard disk 2016 # this is a text file containing a single hashtag'
+    assert labels[0] == 1
+    assert tweets[1] == 'ldsfjlkajdf hasldjasfdlk aldksjfaldksfj # so many hashtags'
+    assert labels[1] == 0
 
 
 def test_build_vocabulary():
@@ -91,9 +146,11 @@ def test_build_vocabulary():
 
 
 def test_format_text_with_hashtag():
-    text = 'The methlamine must not stop flowing. #TheBreakingBad show'
+    text = 'The methlamine must not stop flowing. #2014TheBreakingBad show'
     formatted_text = format_text_with_hashtag(text)
-    assert formatted_text == 'The methlamine must not stop flowing. # The Breaking Bad # show'
+    print formatted_text
+    print formatted_text.split()
+    assert formatted_text == '2014 the breaking bad # the methlamine must not stop flowing show'
 
 
 if __name__ == '__main__':
