@@ -54,39 +54,6 @@ def test_saved_files():
     np_winner_labels = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_label.npy'))
     np_hashtag = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_hashtag.npy'))
 
-    # for i in range(np_first_tweets.shape[0]):
-    #     for j in range(HUMOR_MAX_WORDS_IN_TWEET):
-    #         current_tweet_glove = list(np_first_tweets[i, j*(GLOVE_SIZE+PHONETIC_EMB_SIZE):j*(GLOVE_SIZE+PHONETIC_EMB_SIZE)+GLOVE_SIZE])
-    #         word_exists_for_glove = False
-    #         for key in word_to_glove:
-    #             if word_to_glove[key] == current_tweet_glove:
-    #                 word_exists_for_glove = True
-    #                 print key,
-    #         if not word_exists_for_glove:
-    #             print '_',
-    #     print
-
-    for key1 in word_to_phone:
-        for key2 in word_to_phone:
-            if key1 != key2:
-                if np.array_equal(word_to_phone[key1], word_to_phone[key2]):
-                    print key1, key2
-                    print word_to_phone[key1][:5]
-
-    # for i in range(np_first_tweets.shape[0]):
-    #     for j in range(HUMOR_MAX_WORDS_IN_TWEET):
-    #         current_tweet_phone = list(np_first_tweets[i, j*(GLOVE_SIZE+PHONETIC_EMB_SIZE)+GLOVE_SIZE:j*(GLOVE_SIZE+PHONETIC_EMB_SIZE)+GLOVE_SIZE+PHONETIC_EMB_SIZE])
-    #         word_exists_for_phone = False
-    #         for key in word_to_phone:
-    #             if np.array_equal(word_to_phone[key], current_tweet_phone):
-    #                 print word_to_phone[key][:10]
-    #                 print current_tweet_phone[:10]
-    #                 word_exists_for_phone = True
-    #                 # print key,
-    #         if not word_exists_for_phone:
-    #             print '_',
-    #     print
-
     assert '420' in index_to_word
     assert 'celebs' in word_to_phone
 

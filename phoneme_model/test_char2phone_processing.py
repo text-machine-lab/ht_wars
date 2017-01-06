@@ -12,6 +12,13 @@ from char2phone_processing import MAX_PRONUNCIATION_SIZE
 from char2phone_processing import CMU_CHAR_TO_INDEX_FILE_PATH
 from char2phone_processing import CMU_PHONE_TO_INDEX_FILE_PATH
 
+
+def main():
+    test_word_and_pronunciation_pairs_are_correct_size()
+    test_word_and_pronunciation_pairs_contain_valid_indices()
+    print 'Tests finished successfully'
+
+
 def test_word_and_pronunciation_pairs_are_correct_size():
     np_words = np.load(CMU_NP_WORDS_FILE_PATH)
     np_pronunciations = np.load(CMU_NP_PRONUNCIATIONS_FILE_PATH)
@@ -19,7 +26,8 @@ def test_word_and_pronunciation_pairs_are_correct_size():
     assert np_words.shape[0] == np_pronunciations.shape[0] == num_pairs
     assert np_words.shape[1] == MAX_WORD_SIZE
     assert np_pronunciations.shape[1] == MAX_PRONUNCIATION_SIZE
-    
+
+
 def test_word_and_pronunciation_pairs_contain_valid_indices():
     np_words = np.load(CMU_NP_WORDS_FILE_PATH)
     np_pronunciations = np.load(CMU_NP_PRONUNCIATIONS_FILE_PATH)
@@ -31,3 +39,7 @@ def test_word_and_pronunciation_pairs_contain_valid_indices():
     assert np.min(np_pronunciations) == 0
     assert np.max(np_words) <= max(char_to_index)
     assert np.max(np_pronunciations) <= max(phone_to_index)
+
+
+if __name__ == '__main__':
+    main()

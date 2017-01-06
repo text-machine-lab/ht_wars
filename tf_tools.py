@@ -72,20 +72,21 @@ def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
     return [tf_words, tf_batch_size], [tf_phonemes, encoder_output_emb]
 
 
-def create_dense_layer(input_layer, input_size, output_size, activation=None, include_bias=True):
-    tf_w = tf.Variable(tf.random_normal([input_size, output_size], stddev=.1))
-    tf_b = tf.Variable(tf.random_normal([output_size]))
-    output_layer = tf.matmul(input_layer, tf_w)
-    if include_bias:
-        output_layer = output_layer + tf_b
-    if activation == 'relu':
-        output_layer = tf.nn.relu(output_layer)
-    elif activation == 'sigmoid':
-        output_layer = tf.nn.sigmoid(output_layer)
-    elif activation is None:
-        pass
-    else:
-        print 'Error: Did not specify layer activation'
+def create_dense_layer(input_layer, input_size, output_size, activation=None, include_bias=True, name=None):
+    with tf.name_scope(name):
+        tf_w = tf.Variable(tf.random_normal([input_size, output_size], stddev=.1))
+        tf_b = tf.Variable(tf.random_normal([output_size]))
+        output_layer = tf.matmul(input_layer, tf_w)
+        if include_bias:
+            output_layer = output_layer + tf_b
+        if activation == 'relu':
+            output_layer = tf.nn.relu(output_layer)
+        elif activation == 'sigmoid':
+            output_layer = tf.nn.sigmoid(output_layer)
+        elif activation is None:
+            pass
+        else:
+            print 'Error: Did not specify layer activation'
 
     return output_layer, tf_w, tf_b
 
