@@ -9,6 +9,7 @@ import numpy as np
 import cPickle as pickle
 import random
 import os
+import sklearn
 from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
 from config import HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR
 from config import EMBEDDING_HUMOR_MODEL_DIR
@@ -25,7 +26,7 @@ from tf_tools import create_dense_layer
 from tf_tools import predict_on_hashtag
 
 
-EMBEDDING_HUMOR_MODEL_LEARNING_RATE = .1
+EMBEDDING_HUMOR_MODEL_LEARNING_RATE = .00001
 N_TRAIN_EPOCHS = 1
 DROPOUT = 1  # Off
 
@@ -92,9 +93,15 @@ def build_embedding_humor_model():
     tf_tweet_dense_layer1_dropout = tf.nn.dropout(tf_tweet_dense_layer1, keep_prob=DROPOUT)
     tf_tweet_dense_layer2, _, _ = create_dense_layer(tf_tweet_dense_layer1_dropout, tweet_pair_emb_size * 3 / 4, tweet_pair_emb_size / 2, activation='relu')
     tf_tweet_humor_rating, _, _ = create_dense_layer(tf_tweet_dense_layer2, tweet_pair_emb_size / 2, 1)
-    tf_predictions = tf.nn.sigmoid(tf_tweet_humor_rating)  # tf.argmax(tf_tweet_humor_ratings, 1, name='prediction')
 
-    return [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_rating, tf_batch_size]
+    # Label conversions
+    output_logits = tf.reshape(tf_tweet_humor_rating, [-1])
+    output_prob = tf.nn.sigmoid(output_logits)
+    output = tf.select(tf.greater_equal(output_prob, 0.5), tf.ones_like(output_prob, dtype=tf.int32), tf.zeros_like(output_prob, dtype=tf.int32))
+
+    # tf_predictions = tf.nn.sigmoid(tf_tweet_humor_rating)  # tf.argmax(tf_tweet_humor_ratings, 1, name='prediction')
+
+    return [tf_first_input_tweets, tf_second_input_tweets, output, tf_tweet_humor_rating, tf_batch_size]
 
 
 def build_embedding_humor_model_trainer(model_vars):
@@ -165,12 +172,16 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
                     # print np_batch_predictions
                     # print np.mean(np_batch_predictions)
                     if current_batch_size > 0:
-                        np_batch_predictions_reshape = np.reshape(np_batch_predictions, [-1])
-                        batch_accuracy = np.mean(np.round(np_batch_predictions_reshape) == np_batch_labels)
+                        # np_batch_predictions_reshape = np.reshape(np_batch_predictions, [-1])
+                        # batch_accuracy = np.mean(np.round(np_batch_predictions_reshape) == np_batch_labels)
+                        batch_accuracy = sklearn.metrics.accuracy_score(np_batch_labels, np_batch_predictions)
+
                         batch_accuracies.append(batch_accuracy)
                         batch_losses.append(batch_loss)
                         print 'Batch accuracy: %s' % batch_accuracy
                         print 'Batch loss: %s' % batch_loss
+
+                    starting_training_example += batch_size
 
                 hashtag_accuracy = np.mean(batch_accuracies)
                 hashtag_loss = np.mean(batch_losses)
@@ -178,7 +189,6 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
                 print 'Hashtag loss: %s' % hashtag_loss
                 accuracies.append(hashtag_accuracy)
 
-                starting_training_example += batch_size
             else:
                 print 'Do not train on current hashtag: %s' % trainer_hashtag_name
         print 'Saving..'
