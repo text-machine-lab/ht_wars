@@ -154,7 +154,8 @@ def build_embedding_humor_model_trainer(model_vars):
     actual label using tf.sigmoid_cross_entropy_with_logits() (sigmoid is done internally)."""
     print 'Building embedding humor model trainer'
     tf_labels = tf.placeholder(dtype=tf.int32, shape=[None], name='labels')
-    [_, _, _, tf_tweet_humor_rating, tf_batch_size, _, _] = model_vars
+    [tf_first_input_tweets, tf_second_input_tweets, output, tf_tweet_humor_rating, tf_batch_size, tf_hashtag,
+     output_prob] = model_vars
     tf_reshaped_labels = tf.cast(tf.reshape(tf_labels, [-1, 1]), tf.float32)
 
     tf_cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(tf_tweet_humor_rating, tf_reshaped_labels)
@@ -171,7 +172,7 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
     and an accuracy of -1 is returned."""
     if not os.path.exists(EMBEDDING_HUMOR_MODEL_DIR):
         os.makedirs(EMBEDDING_HUMOR_MODEL_DIR)
-    [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_ratings, tf_batch_size, tf_hashtag, tf_output_prob] = model_vars
+    [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_rating, tf_batch_size, tf_hashtag, output_prob] = model_vars
     [tf_loss, tf_labels] = trainer_vars
 
     sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))

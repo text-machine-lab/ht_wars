@@ -151,47 +151,47 @@ def predict_on_hashtag(sess, model_vars, hashtag_name, hashtag_dir, error_analys
     on. error_analysis_stats should be a string and a number. The string is the location where Semeval hashtag .tsv files are kept(training or testing).
     The number is the number of worst tweet pairs to print."""
     print 'Predicting on hashtag %s' % hashtag_name
-    [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_humor_ratings, tf_batch_size, tf_hashtag, tf_output_prob] = model_vars
+    [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_rating, tf_batch_size, tf_hashtag, tf_output_prob] = model_vars
     np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag = load_hashtag_data(hashtag_dir, hashtag_name)
     np_predictions, np_output_prob = sess.run([tf_predictions, tf_output_prob],
-                                                      feed_dict={tf_first_input_tweets: np_first_tweets,
+                                                    feed_dict={tf_first_input_tweets: np_first_tweets,
                                                                  tf_second_input_tweets: np_second_tweets,
                                                                  tf_batch_size: np_first_tweets.shape[0],
                                                                  tf_hashtag: np_hashtag})
 
-    # Error analysis. Generate expected value for each tweet pair. Look for worst, then for second worst, to N worst
-    if error_analysis_stats is not None:
-        tweet_input_dir = error_analysis_stats[0]
-        num_worst_tweets_to_print = error_analysis_stats[1]
-        tweets, labels, tweet_ids = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv')
-        id_to_tweet = dict(zip(tweet_ids, tweets))
-
-        # Calculate how off each prediction was from its label (its deviation)
-        num_examples = np_output_prob.shape[0]
-        np_fractional_predictions = np_output_prob
-        print np_fractional_predictions
-        np_prediction_deviations = np.abs(np_labels - np_fractional_predictions)
-        average_deviation = np.mean(np_prediction_deviations)
-        average_error = np.mean(np.abs(np_prediction_deviations - average_deviation))
-        print 'Average deviation: %s' % average_deviation
-        print 'Average error: %s' % average_error
-
-        # Find tweets that were the farthest off from their labels
-        worst_deviation_indices = find_indices_larger_than_threshold(np_prediction_deviations, .9)
-
-        print 'Average label: %s' % np.mean(np_labels)
-
-        for worst_deviation_index in worst_deviation_indices:
-            print np_prediction_deviations[worst_deviation_index]
-            print id_to_tweet[first_tweet_ids[worst_deviation_index]]
-            print id_to_tweet[second_tweet_ids[worst_deviation_index]]
-            print 'Winner label(first 1 second 0): %s' % np_labels[worst_deviation_index]
-            print 'Winner prediction label(first 1 second 0): %s' % np_fractional_predictions[worst_deviation_index]
-
-        worst_deviation_labels = [np_labels[worst_deviation_i] for worst_deviation_i in worst_deviation_indices]
-        unique, unique_counts = np.unique(worst_deviation_labels, return_counts=True)
-        for u, c in zip(unique, unique_counts):
-            print u, c
+    # # Error analysis. Generate expected value for each tweet pair. Look for worst, then for second worst, to N worst
+    # if error_analysis_stats is not None:
+    #     tweet_input_dir = error_analysis_stats[0]
+    #     num_worst_tweets_to_print = error_analysis_stats[1]
+    #     tweets, labels, tweet_ids = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv')
+    #     id_to_tweet = dict(zip(tweet_ids, tweets))
+    #
+    #     # Calculate how off each prediction was from its label (its deviation)
+    #     num_examples = np_output_prob.shape[0]
+    #     np_fractional_predictions = np_output_prob
+    #     print np_fractional_predictions
+    #     np_prediction_deviations = np.abs(np_labels - np_fractional_predictions)
+    #     average_deviation = np.mean(np_prediction_deviations)
+    #     average_error = np.mean(np.abs(np_prediction_deviations - average_deviation))
+    #     print 'Average deviation: %s' % average_deviation
+    #     print 'Average error: %s' % average_error
+    #
+    #     # Find tweets that were the farthest off from their labels
+    #     worst_deviation_indices = find_indices_larger_than_threshold(np_prediction_deviations, .9)
+    #
+    #     print 'Average label: %s' % np.mean(np_labels)
+    #
+    #     for worst_deviation_index in worst_deviation_indices:
+    #         print np_prediction_deviations[worst_deviation_index]
+    #         print id_to_tweet[first_tweet_ids[worst_deviation_index]]
+    #         print id_to_tweet[second_tweet_ids[worst_deviation_index]]
+    #         print 'Winner label(first 1 second 0): %s' % np_labels[worst_deviation_index]
+    #         print 'Winner prediction label(first 1 second 0): %s' % np_fractional_predictions[worst_deviation_index]
+    #
+    #     worst_deviation_labels = [np_labels[worst_deviation_i] for worst_deviation_i in worst_deviation_indices]
+    #     unique, unique_counts = np.unique(worst_deviation_labels, return_counts=True)
+    #     for u, c in zip(unique, unique_counts):
+    #         print u, c
 
 
 
