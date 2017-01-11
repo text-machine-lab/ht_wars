@@ -197,6 +197,7 @@ def load_hashtag_data_and_vocabulary(tweet_pairs_path, char_to_index_path):
     return hashtag_datas, char_to_index, vocab_size
 
 
+
 def invert_dictionary(dictionary):
     inv_dictionary = {v: k for k, v in dictionary.iteritems()}
     return inv_dictionary

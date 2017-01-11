@@ -18,25 +18,34 @@ from tools import HUMOR_MAX_WORDS_IN_TWEET
 from tools import HUMOR_MAX_WORDS_IN_HASHTAG
 from config import SEMEVAL_HUMOR_TRAIN_DIR
 from config import SEMEVAL_HUMOR_TRIAL_DIR
+from config import HUMOR_CHAR_TO_INDEX_FILE_PATH
+from config import HUMOR_TWEET_PAIR_DIR
 from tools import GLOVE_SIZE
 from tools import PHONETIC_EMB_SIZE
 from tools import get_hashtag_file_names
 from tools import load_hashtag_data
+from tools import load_hashtag_data_and_vocabulary
 from tf_tools import GPU_OPTIONS
 from tf_tools import create_dense_layer
 from tf_tools import predict_on_hashtag
 from tf_tools import create_tensorboard_visualization
+from keras.models import Model
+from keras.layers import Input, Dense, Dropout, Flatten, merge, Embedding
+from keras.layers import Convolution1D, MaxPooling1D
 
 
 EMBEDDING_HUMOR_MODEL_LEARNING_RATE = .000005
-N_TRAIN_EPOCHS = 0
+N_TRAIN_EPOCHS = 1
 DROPOUT = 1  # Off
+TWEET_SIZE = 140
 
 
 def main():
     """Game plan: Use train_dir hashtags to train the model. Then use trial_dir hashtags
     to evaluate its performance. This creates a faster development environment than
     leave-one-out."""
+    # hashtag_datas, char_to_index, vocab_size = load_hashtag_data_and_vocabulary(HUMOR_TWEET_PAIR_DIR, HUMOR_CHAR_TO_INDEX_FILE_PATH)
+
     model_vars = build_embedding_humor_model()
     trainer_vars = build_embedding_humor_model_trainer(model_vars)
     create_tensorboard_visualization('emb_humor_model')
@@ -86,6 +95,9 @@ def build_embedding_humor_model():
                                                                               [tf_second_input_tweets], word_embedding_size,
                                                                               HUMOR_MAX_WORDS_IN_TWEET, lstm_scope='TWEET_ENCODER',
                                                                               reuse=True, time_step_inputs=[])
+
+    # Insert character model here
+    # model, tweet1_conv_emb, tweet2_conv_emb, tweet1, tweet2 = create_character_model(TWEET_SIZE)
 
     tf_tweet_pair_emb = tf.concat(1, [tf_first_tweet_encoder_output, tf_second_tweet_encoder_output])
 
@@ -250,6 +262,53 @@ def calculate_accuracy_on_batches(batch_predictions, np_labels):
             accuracy_sum += batch_accuracy * batch_size
             total_examples += batch_size
     return accuracy_sum / total_examples
+
+
+def create_character_model(tweet_size, vocab_size):
+    '''Load two tweets, analyze them with convolution and predict which is funnier.'''
+    print 'Building model'
+    # Model parameters I can mess with:
+    num_filters_1 = 32
+    num_filters_2 = 64
+    filter_size_1 = 3
+    filter_size_2 = 5
+    dropout = 0.7
+    fc1_dim = 200
+    fc2_dim = 50
+    tweet_emb_dim = 50
+    pool_length = 5
+
+    print 'Vocabulary size: %s' % vocab_size
+    # Two tweets as input. Run them through an embedding layer
+    tweet1 = Input(shape=[tweet_size])
+    tweet2 = Input(shape=[tweet_size])
+
+    tweet_input_emb_lookup = Embedding(vocab_size, tweet_emb_dim, input_length=tweet_size)
+    tweet1_emb = tweet_input_emb_lookup(tweet1)
+    tweet2_emb = tweet_input_emb_lookup(tweet2)
+
+    # Run both tweets separately through convolution layers, a max pool layer,
+    # and then flatten them for dense layer.
+    convolution_layer_1 = Convolution1D(num_filters_1, filter_size_1, input_shape=[tweet_size, vocab_size])
+    convolution_layer_2 = Convolution1D(num_filters_2, filter_size_2)
+    max_pool_layer = MaxPooling1D(stride=4)
+    flatten = Flatten()
+    tweet_conv_emb = Dense(fc1_dim, activation='relu')
+
+    tweet_1_conv1 = max_pool_layer(convolution_layer_1(tweet1_emb))
+    tweet_2_conv1 = max_pool_layer(convolution_layer_1(tweet2_emb))
+    tweet1_conv2 = flatten(max_pool_layer(convolution_layer_2(tweet_1_conv1)))
+    tweet2_conv2 = flatten(max_pool_layer(convolution_layer_2(tweet_2_conv1)))
+    tweet1_conv_emb = tweet_conv_emb(tweet1_conv2)
+    tweet2_conv_emb = tweet_conv_emb(tweet2_conv2)
+
+    # Combine embeddings for each tweet as inputs to two dense layers.
+    tweet_pair_emb = merge([tweet1_conv_emb, tweet2_conv_emb], mode='concat')
+    tweet_pair_emb = Dropout(dropout)(tweet_pair_emb)
+    dense_layer1 = Dense(fc2_dim, activation='relu')(tweet_pair_emb)
+    output = Dense(1, activation='sigmoid')(dense_layer1)
+    model = Model(input=[tweet1, tweet2], output=[output])
+    return model, tweet1_conv_emb, tweet2_conv_emb, tweet1, tweet2
 
 
 if __name__ == '__main__':
