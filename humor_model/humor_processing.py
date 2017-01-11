@@ -118,12 +118,16 @@ def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, twe
     for hashtag_name in hashtag_names:
         print 'Loading hashtag: %s' % hashtag_name
         formatted_hashtag_name = ' '.join(hashtag_name.split('_')).lower()
-        tweets, labels, tweet_ids = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv', explicit_hashtag=formatted_hashtag_name)
+        tweets, labels, tweet_ids = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv', explicit_hashtag=formatted_hashtag_name)  # formatted_hashtag_name)
 
         print 'Generating tweet pairs'
         random.seed(TWEET_PAIR_LABEL_RANDOM_SEED)
         tweet_pairs = extract_tweet_pairs(tweets, labels, tweet_ids)
         tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
+
+        for tweet in tweet1:
+            print tweet
+
         tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
         tweet2 = [tweet_pair[2] for tweet_pair in tweet_pairs]
         tweet2_id = [tweet_pair[3] for tweet_pair in tweet_pairs]
@@ -131,8 +135,8 @@ def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, twe
         print 'For each tweet in pair, converting to GloVe/phonetic vector format'
         np_label = np.array(labels)
         np_hashtag_gloves_col = convert_tweet_to_embeddings([formatted_hashtag_name], word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_SIZE, PHONETIC_EMB_SIZE)
-        np_hashtag_gloves = np.reshape(np_hashtag_gloves_col, [np_hashtag_gloves_col.shape[1]])
-        #print np_hashtag_gloves.T.shape
+        np_hashtag_gloves = np.repeat(np_hashtag_gloves_col, len(tweet1), axis=0)
+
         np_tweet1_gloves = convert_tweet_to_embeddings(tweet1, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET, GLOVE_SIZE, PHONETIC_EMB_SIZE)
         np_tweet2_gloves = convert_tweet_to_embeddings(tweet2, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET, GLOVE_SIZE, PHONETIC_EMB_SIZE)
         # Save
@@ -145,15 +149,6 @@ def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, twe
         np.save(open(tweet_pair_output_dir + hashtag_name + '_second_tweet_glove.npy', 'wb'),
                 np_tweet2_gloves)
         pickle.dump(tweet2_id, open(tweet_pair_output_dir + hashtag_name + '_second_tweet_ids.cpkl', 'wb'))
-
-
-def compute_most_words_in_winning_tweets(tweets, labels):
-    winning_tweet_number_of_words = []
-    for i in range(len(tweets)):
-        if labels[i] == 2:  # Winning tweet
-            tokens = tweets[i].split(' ')
-            winning_tweet_number_of_words.append(len(tokens))
-    return np.max(winning_tweet_number_of_words), np.mean(winning_tweet_number_of_words)
 
 
 def convert_tweet_to_embeddings(tweets, word_to_glove, word_to_phonetic, max_number_of_words, glove_size, phonetic_emb_size):

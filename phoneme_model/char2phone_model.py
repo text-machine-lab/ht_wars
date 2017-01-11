@@ -16,6 +16,7 @@ from config import CHAR_2_PHONE_MODEL_DIR
 from tf_tools import MAX_PRONUNCIATION_SIZE
 from tf_tools import MAX_WORD_SIZE
 from tf_tools import GPU_OPTIONS
+from tf_tools import create_tensorboard_visualization
 
 
 from tf_tools import build_chars_to_phonemes_model
@@ -49,7 +50,7 @@ def main():
     
     model_inputs, model_outputs = build_chars_to_phonemes_model(len(char_to_index), len(phone_to_index))
     training_inputs, training_outputs = build_trainer(model_inputs, model_outputs)
-    create_tensorboard_visualization()
+    create_tensorboard_visualization('c2p_model')
     sess = train_model(model_inputs,
                        model_outputs,
                        training_inputs,
@@ -68,12 +69,6 @@ def main():
                                          np_testing_pronunciations[:num_examples_to_print],
                                          index_to_char,
                                          index_to_phone)
-
-
-def create_tensorboard_visualization():
-    print 'Creating Tensorboard visualization'
-    writer = tf.train.SummaryWriter("/tmp/c2p_model/")
-    writer.add_graph(tf.get_default_graph())
 
 
 def build_trainer(model_inputs, model_outputs):

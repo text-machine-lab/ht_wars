@@ -57,9 +57,9 @@ def format_tweet_pairs(data, char_to_index, max_tweet_size=140):
     np_tweet_pair_labels = np.zeros(shape=[len(data)], dtype=int)
     for pair_index in range(len(data)):
         first_tweet = data[pair_index][0]
-        second_tweet = data[pair_index][1]
+        second_tweet = data[pair_index][2]
         # Insert label for tweet pair into numpy array.
-        np_tweet_pair_labels[pair_index] = data[pair_index][2]
+        np_tweet_pair_labels[pair_index] = data[pair_index][4]
         # Insert first tweet of pair into numpy array.
         for i in range(len(first_tweet)):
             if i < max_tweet_size:

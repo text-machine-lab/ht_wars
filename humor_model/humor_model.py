@@ -15,6 +15,7 @@ from config import HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR
 from config import EMBEDDING_HUMOR_MODEL_DIR
 from config import SEMEVAL_HUMOR_TRIAL_DIR
 from tools import HUMOR_MAX_WORDS_IN_TWEET
+from tools import HUMOR_MAX_WORDS_IN_HASHTAG
 from config import SEMEVAL_HUMOR_TRAIN_DIR
 from config import SEMEVAL_HUMOR_TRIAL_DIR
 from tools import GLOVE_SIZE
@@ -24,10 +25,11 @@ from tools import load_hashtag_data
 from tf_tools import GPU_OPTIONS
 from tf_tools import create_dense_layer
 from tf_tools import predict_on_hashtag
+from tf_tools import create_tensorboard_visualization
 
 
-EMBEDDING_HUMOR_MODEL_LEARNING_RATE = .00001
-N_TRAIN_EPOCHS = 1
+EMBEDDING_HUMOR_MODEL_LEARNING_RATE = .000005
+N_TRAIN_EPOCHS = 0
 DROPOUT = 1  # Off
 
 
@@ -37,6 +39,7 @@ def main():
     leave-one-out."""
     model_vars = build_embedding_humor_model()
     trainer_vars = build_embedding_humor_model_trainer(model_vars)
+    create_tensorboard_visualization('emb_humor_model')
     training_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRAIN_DIR)
     testing_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRIAL_DIR)
     accuracies = []
@@ -68,15 +71,21 @@ def build_embedding_humor_model():
 
     tf_first_input_tweets = tf.placeholder(dtype=tf.float32, shape=[None, HUMOR_MAX_WORDS_IN_TWEET * word_embedding_size], name='first_tweets')
     tf_second_input_tweets = tf.placeholder(dtype=tf.float32, shape=[None, HUMOR_MAX_WORDS_IN_TWEET * word_embedding_size], name='second_tweets')
+    tf_hashtag = tf.placeholder(dtype=tf.float32, shape=[None, HUMOR_MAX_WORDS_IN_HASHTAG * word_embedding_size], name='hashtag')
+
+    tf_hashtag_output, tf_hashtag_hidden_state = build_lstm(word_embedding_size, tf_batch_size,
+                                                            [tf_hashtag], word_embedding_size,
+                                                            HUMOR_MAX_WORDS_IN_HASHTAG, lstm_scope='HASHTAG_ENCODER')
 
     tf_first_tweet_encoder_output, tf_first_tweet_hidden_state = build_lstm(word_embedding_size * 2, tf_batch_size,
-                                                                            tf_first_input_tweets, word_embedding_size,
-                                                                            HUMOR_MAX_WORDS_IN_TWEET, lstm_scope='TWEET_ENCODER')
+                                                                            [tf_first_input_tweets], word_embedding_size,
+                                                                            HUMOR_MAX_WORDS_IN_TWEET, lstm_scope='TWEET_ENCODER',
+                                                                            time_step_inputs=[])
 
     tf_second_tweet_encoder_output, tf_second_tweet_hidden_state = build_lstm(word_embedding_size * 2, tf_batch_size,
-                                                                              tf_second_input_tweets, word_embedding_size,
+                                                                              [tf_second_input_tweets], word_embedding_size,
                                                                               HUMOR_MAX_WORDS_IN_TWEET, lstm_scope='TWEET_ENCODER',
-                                                                              reuse=True)
+                                                                              reuse=True, time_step_inputs=[])
 
     tf_tweet_pair_emb = tf.concat(1, [tf_first_tweet_encoder_output, tf_second_tweet_encoder_output])
 
@@ -97,23 +106,30 @@ def build_embedding_humor_model():
     for var in trainable_vars:
         print var.name
 
-    return [tf_first_input_tweets, tf_second_input_tweets, output, tf_tweet_humor_rating, tf_batch_size]  # Model vars
+    return [tf_first_input_tweets, tf_second_input_tweets, output, tf_tweet_humor_rating, tf_batch_size, tf_hashtag, output_prob]  # Model vars
 
 
-def build_lstm(lstm_hidden_dim, tf_batch_size, tf_input, input_time_step_size, num_time_steps, lstm_scope=None, reuse=False):
+def build_lstm(lstm_hidden_dim, tf_batch_size, inputs, input_time_step_size, num_time_steps, lstm_scope=None, reuse=False, time_step_inputs=[]):
     """Runs an LSTM over input data and returns LSTM output and hidden state. Arguments:
-    lstm_hidden_dim - size of hidden state of LSTM
-    tf_batch_size - tensor value representing size of current batch. Required for LSTM package
-    tf_input - full input into LSTM. First dimension of m examples, with second dimension holding concatenated input for all timesteps
-    input_timestep_size - Size of input from tf_input that will go into LSTM in a single timestep
-    num_timesteps - number of timesteps to run LSTM
-    lstm_scope - can be a string or a scope object. Used to disambiguate variable scopes of different LSTM objects"""
+    lstm_hidden_dim - Size of hidden state of LSTM
+    tf_batch_size - Tensor value representing size of current batch. Required for LSTM package
+    inputs - Full input into LSTM. List of tensors as input. Per tensor: First dimension of m examples, with second dimension holding concatenated input for all timesteps
+    input_time_step_size - Size of input from tf_input that will go into LSTM in a single timestep
+    num_time_steps - Number of time steps to run LSTM
+    lstm_scope - Can be a string or a scope object. Used to disambiguate variable scopes of different LSTM objects
+    time_step_inputs - Inputs that are per time step. The same tensor is inserted into the model at each time step"""
     lstm = tf.nn.rnn_cell.LSTMCell(num_units=lstm_hidden_dim, state_is_tuple=True)
     tf_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
     for i in range(num_time_steps):
-        tf_input_time_step = tf.slice(tf_input, [0, i * input_time_step_size], [-1, input_time_step_size])
+        # Grab time step input for each input tensor
+        current_time_step_inputs = []
+        for tf_input in inputs:
+            current_time_step_inputs.append(tf.slice(tf_input, [0, i * input_time_step_size], [-1, input_time_step_size]))
+
+        tf_input_time_step = tf.concat(1, current_time_step_inputs + time_step_inputs)
+
         with tf.variable_scope(lstm_scope) as scope:
-            if i > 0 or reuse == True:
+            if i > 0 or reuse:
                 scope.reuse_variables()
             tf_lstm_output, tf_hidden_state = lstm(tf_input_time_step, tf_hidden_state)
     return tf_lstm_output, tf_hidden_state
@@ -126,7 +142,7 @@ def build_embedding_humor_model_trainer(model_vars):
     actual label using tf.sigmoid_cross_entropy_with_logits() (sigmoid is done internally)."""
     print 'Building embedding humor model trainer'
     tf_labels = tf.placeholder(dtype=tf.int32, shape=[None], name='labels')
-    [_, _, _, tf_tweet_humor_rating, tf_batch_size] = model_vars
+    [_, _, _, tf_tweet_humor_rating, tf_batch_size, _, _] = model_vars
     tf_reshaped_labels = tf.cast(tf.reshape(tf_labels, [-1, 1]), tf.float32)
 
     tf_cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(tf_tweet_humor_rating, tf_reshaped_labels)
@@ -143,7 +159,7 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
     and an accuracy of -1 is returned."""
     if not os.path.exists(EMBEDDING_HUMOR_MODEL_DIR):
         os.makedirs(EMBEDDING_HUMOR_MODEL_DIR)
-    [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_ratings, tf_batch_size] = model_vars
+    [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_ratings, tf_batch_size, tf_hashtag, tf_output_prob] = model_vars
     [tf_loss, tf_labels] = trainer_vars
 
     sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
@@ -160,7 +176,7 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
         for trainer_hashtag_name in hashtag_names:
             if trainer_hashtag_name != hashtag_name:
                 # Train on this hashtag.
-                np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids = \
+                np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag = \
                     load_hashtag_data(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR, trainer_hashtag_name)
                 current_batch_size = batch_size
                 # Use these parameters to keep track of batch size and start location.
@@ -178,23 +194,25 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
                     else:
                         current_batch_size = batch_size
 
-                    np_batch_first_tweets = np_first_tweets[starting_training_example:starting_training_example+current_batch_size]
-                    np_batch_second_tweets = np_second_tweets[starting_training_example:starting_training_example+current_batch_size]
+                    np_batch_first_tweets = np_first_tweets[starting_training_example:starting_training_example+current_batch_size, :]
+                    np_batch_second_tweets = np_second_tweets[starting_training_example:starting_training_example+current_batch_size, :]
                     np_batch_labels = np_labels[starting_training_example:starting_training_example+current_batch_size]
+                    np_batch_hashtag = np_hashtag[starting_training_example:starting_training_example+current_batch_size, :]
                     # Run train step here.
                     [np_batch_predictions, batch_loss, _] = sess.run([tf_predictions, tf_loss, train_op],
                                                                      feed_dict={tf_first_input_tweets:np_batch_first_tweets,
                                                                                 tf_second_input_tweets:np_batch_second_tweets,
                                                                                 tf_labels: np_batch_labels,
-                                                                                tf_batch_size: current_batch_size})
+                                                                                tf_batch_size: current_batch_size,
+                                                                                tf_hashtag: np_batch_hashtag})
 
                     if current_batch_size > 0:
                         batch_accuracy = sklearn.metrics.accuracy_score(np_batch_labels, np_batch_predictions)
 
                         batch_accuracies.append(batch_accuracy)
                         batch_losses.append(batch_loss)
-                        print 'Batch accuracy: %s' % batch_accuracy
-                        print 'Batch loss: %s' % batch_loss
+                        # print 'Batch accuracy: %s' % batch_accuracy
+                        # print 'Batch loss: %s' % batch_loss
 
                     starting_training_example += current_batch_size
 

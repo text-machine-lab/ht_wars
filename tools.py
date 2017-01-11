@@ -24,13 +24,15 @@ def extract_tweet_pairs_from_file(hashtag_file):
     tweet is funnier.'''
     tweets = []
     tweet_ranks = []
+    tweet_ids = []
 
     # Get all tweets in file along with their ranks.
     with open(hashtag_file) as tsv:
         for line in csv.reader(tsv, dialect='excel-tab'):
+            tweet_ids.append(int(line[0]))
             tweets.append(line[1])
             tweet_ranks.append(int(line[2]))
-    return extract_tweet_pairs(tweets, tweet_ranks)
+    return extract_tweet_pairs(tweets, tweet_ranks, tweet_ids)
 
 
 def remove_hashtag_from_tweets(tweets):
@@ -98,7 +100,12 @@ def extract_tweet_pairs(tweets, tweet_ranks, tweet_ids):
 
 
 def format_text_with_hashtag(text, hashtag_replace=None):
-    """Remove hashtag from text."""
+    """Split up existing hashtags. If hashtag_replace=None, then hashtags
+    existing in tweet will be broken up and placed at the beginning. If
+    hashtag_replace='', no hashtag will be added to the beginning. If
+    hashtag_replace is a series of words, they will be placed at the beginning
+    of the tweet. A # token will be placed after hashtags placed at the beginning
+    of the tweet."""
     # If you hit a hashtag symbol, you are inside a hashtag.
     # While inside hashtag, don't add characters to output.
     # You are no longer inside a hashtag if you encounter a space (don't add space to output).
@@ -119,16 +126,23 @@ def format_text_with_hashtag(text, hashtag_replace=None):
         else:
             if text[i].isalpha() or text[i] == ' ' or text[i] == '@':
                 formatted_text += text[i]
+            # if text[i] == '_' or text[i] == '-':
+            #     formatted_text += ' '
         if text[i] == ' ':
             inside_hashtag = False
     if hashtag_replace is not None:
         formatted_hashtag += hashtag_replace
-    raw_output = (formatted_hashtag + ' # ' + formatted_text).lower()
+    if hashtag_replace != '':
+        formatted_hashtag += ' # '
+    raw_output = (formatted_hashtag + formatted_text).lower()
     return ' '.join(raw_output.split())
 
 
-
 def load_tweets_from_hashtag(filename, explicit_hashtag=None):
+    """Open hashtag file, and read each line. For each line,
+    read a tweet, its corresponding tweet id, and a label that indicates
+    if the tweet was a winner (2), top-ten (1) or non-winner (0) tweet.
+    Format the tweet and return [tweets, labels, tweet_ids]."""
     tweet_ids = []
     tweets = []
     labels = []
@@ -209,7 +223,8 @@ def load_hashtag_data(directory, hashtag_name):
     np_second_tweets = np.load(open(directory + hashtag_name + '_second_tweet_glove.npy', 'rb'))
     second_tweet_ids = pickle.load(open(directory + hashtag_name + '_second_tweet_ids.cpkl', 'rb'))
     np_labels = np.load(open(directory + hashtag_name + '_label.npy', 'rb'))
-    return np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids
+    np_hashtag = np.load(open(directory + hashtag_name + '_hashtag.npy', 'rb'))
+    return np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag
 
 
 def expected_value(np_prob):
@@ -221,7 +236,9 @@ def expected_value(np_prob):
 
 def find_indices_larger_than_threshold(np_x, n):
     """Returns indices into array np_x, where the value
-    at each index is larger than the threshold n."""
+    at each index is larger than the threshold n. This
+    does not include elements where the value is equal
+    to the threshold n."""
     largest_value_indices = []
 
     for index in range(0, np_x.size):
