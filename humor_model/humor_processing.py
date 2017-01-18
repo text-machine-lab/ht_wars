@@ -121,12 +121,9 @@ def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, twe
         tweets, labels, tweet_ids = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv', explicit_hashtag=formatted_hashtag_name)  # formatted_hashtag_name)
 
         print 'Generating tweet pairs'
-        random.seed(TWEET_PAIR_LABEL_RANDOM_SEED)
+        random.seed(TWEET_PAIR_LABEL_RANDOM_SEED + hashtag_name)
         tweet_pairs = extract_tweet_pairs(tweets, labels, tweet_ids)
         tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
-
-        for tweet in tweet1:
-            print tweet
 
         tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
         tweet2 = [tweet_pair[2] for tweet_pair in tweet_pairs]

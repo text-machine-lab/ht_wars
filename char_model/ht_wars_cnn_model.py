@@ -15,7 +15,7 @@ from keras.layers.recurrent import LSTM
 from keras.utils import np_utils
 from keras import backend as K
 import cPickle as pickle
-from config import HUMOR_TWEET_PAIR_DIR
+from config import HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
 from config import HUMOR_CHAR_TO_INDEX_FILE_PATH
 from tools import load_hashtag_data_and_vocabulary
 
@@ -44,7 +44,7 @@ def train():
     '''Load all tweet pairs per all hashtags. Per hashtag, train on all other hashtags, test on current hashtag.
     Print out micro-accuracy each iteration and print out overall accuracy after.'''
     # Load training tweet pairs/labels, and train on them.
-    hashtag_datas, char_to_index, vocab_size = load_hashtag_data_and_vocabulary(HUMOR_TWEET_PAIR_DIR, HUMOR_CHAR_TO_INDEX_FILE_PATH)
+    hashtag_datas, char_to_index, vocab_size = load_hashtag_data_and_vocabulary(HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR, HUMOR_CHAR_TO_INDEX_FILE_PATH)
 #     all_tweet_pairs = np.concatenate([hashtag_datas[i][1] for i in range(len(hashtag_datas))])
 #     all_tweet_labels = np.concatenate([hashtag_datas[i][0] for i in range(len(hashtag_datas))])
     accuracies = []

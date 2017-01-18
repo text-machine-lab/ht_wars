@@ -14,6 +14,18 @@ HUMOR_MAX_WORDS_IN_TWEET = 20  # All winning tweets are under 30 words long
 HUMOR_MAX_WORDS_IN_HASHTAG = 8
 GLOVE_SIZE = 200
 PHONETIC_EMB_SIZE = 200
+TWEET_SIZE = 140
+
+
+def extract_tweet_pair_from_hashtag_datas(hashtag_datas, hashtag_name, tweet_size=TWEET_SIZE):
+    for hashtag_data in hashtag_datas:
+        current_hashtag_name = hashtag_data[0]
+        if current_hashtag_name == hashtag_name:
+            np_tweet_pairs = hashtag_data[1]
+            np_first_tweets = np_tweet_pairs[:, :TWEET_SIZE]
+            np_second_tweets = np_tweet_pairs[:, TWEET_SIZE:]
+            return np_first_tweets, np_second_tweets
+    return None
 
 
 def extract_tweet_pairs_from_file(hashtag_file):
@@ -192,8 +204,12 @@ def load_hashtag_data_and_vocabulary(tweet_pairs_path, char_to_index_path):
                 tweet_pairs = np.load(tweet_pairs_path + filename)
                 tweet_labels = np.load(tweet_pairs_path + hashtag_name + '_labels.npy')
                 hashtag_datas.append([hashtag_name, tweet_pairs, tweet_labels])
-    char_to_index = pickle.load(open(char_to_index_path, 'rb'))
-    vocab_size = len(char_to_index)
+    if char_to_index_path is not None:
+        char_to_index = pickle.load(open(char_to_index_path, 'rb'))
+        vocab_size = len(char_to_index)
+    else:
+        char_to_index = None
+        vocab_size = 0
     return hashtag_datas, char_to_index, vocab_size
 
 

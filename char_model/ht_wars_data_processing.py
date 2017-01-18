@@ -22,30 +22,39 @@ import sys
 
 sys.path.append('../')
 from config import SEMEVAL_HUMOR_TRAIN_DIR
-from config import HUMOR_TWEET_PAIR_DIR
+from config import SEMEVAL_HUMOR_TRIAL_DIR
+from config import HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
+from config import HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR
 from config import HUMOR_CHAR_TO_INDEX_FILE_PATH
+from config import TWEET_PAIR_LABEL_RANDOM_SEED
 from tools import get_hashtag_file_names
 from tools import extract_tweet_pairs_from_file
 
 def main():
     # Find hashtags, create character vocabulary, print dataset statistics, extract/format tweet pairs and save everything.
-    print "Processing #HashtagWars data..."
-    hashtags = get_hashtag_file_names(SEMEVAL_HUMOR_TRAIN_DIR)
-    char_to_index = build_character_vocabulary(hashtags)
+    # Repeat this for both training and trial sets.
+    print "Processing #HashtagWars training data..."
+    process_hashtag_data(SEMEVAL_HUMOR_TRAIN_DIR, HUMOR_CHAR_TO_INDEX_FILE_PATH, HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR)
+    print "Processing #HashtagWars trial data..."
+    process_hashtag_data(SEMEVAL_HUMOR_TRIAL_DIR, None, HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR)
+     
+
+def process_hashtag_data(hashtag_dir, char_to_index_path, tweet_pair_path):
+    hashtags = get_hashtag_file_names(hashtag_dir)
+    char_to_index = build_character_vocabulary(hashtags, directory=hashtag_dir)
     print('Size of character vocabulary: %s' % len(char_to_index))
-    output_tweet_statistics(hashtags)
+    output_tweet_statistics(hashtags, directory=hashtag_dir)
     print 'Extracting tweet pairs...'
     for i in range(len(hashtags)):
         hashtag = hashtags[i]
-        data = extract_tweet_pairs_from_file(SEMEVAL_HUMOR_TRAIN_DIR + hashtag + '.tsv')
+        random.seed(TWEET_PAIR_LABEL_RANDOM_SEED + hashtag)
+        data = extract_tweet_pairs_from_file(hashtag_dir + hashtag + '.tsv')
         np_tweet_pairs, np_tweet_pair_labels = format_tweet_pairs(data, char_to_index)
-        save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag)
+        save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag, directory=tweet_pair_path)
     print 'Saving char_to_index.cpkl containing character vocabulary'
-    pickle.dump(char_to_index, open(HUMOR_CHAR_TO_INDEX_FILE_PATH, 'wb'))
+    if char_to_index_path is not None:
+        pickle.dump(char_to_index, open(char_to_index_path, 'wb'))
     print "Done!"
-     
-# def main():
-#     test_reconstruct_tweets_from_file()
 
 
 def format_tweet_pairs(data, char_to_index, max_tweet_size=140):
@@ -76,7 +85,7 @@ def format_tweet_pairs(data, char_to_index, max_tweet_size=140):
     return np_tweet_pairs, np_tweet_pair_labels
 
 
-def output_tweet_statistics(hashtags):
+def output_tweet_statistics(hashtags, directory=SEMEVAL_HUMOR_TRAIN_DIR):
     '''This function analyzes the dataset and prints statistics for it.
     These statistics have to do with the number of tweets, the largest and average
     length of tweets - for all tweets, top-ten tweets, and winning tweets.'''
@@ -90,7 +99,7 @@ def output_tweet_statistics(hashtags):
     
     # Find tweet length statistics (max, average, std dev) and number of tweets.
     for hashtag in hashtags:
-        with open(SEMEVAL_HUMOR_TRAIN_DIR + hashtag + '.tsv') as tsv:
+        with open(directory + hashtag + '.tsv') as tsv:
             for line in csv.reader(tsv, dialect='excel-tab'):
                 # Count number of tweets, find longest tweet, find average tweet length
                 # for all tweets, top ten, and winning.
@@ -114,7 +123,7 @@ def output_tweet_statistics(hashtags):
     tweet_std_dev_sum = 0
     winning_tweet_std_dev_sum = 0
     for hashtag in hashtags:
-        with open(SEMEVAL_HUMOR_TRAIN_DIR + hashtag + '.tsv') as tsv:
+        with open(directory + hashtag + '.tsv') as tsv:
             for line in csv.reader(tsv, dialect='excel-tab'):
                 tweet_length = len(line[1])
                 tweet_rank = int(line[2])
@@ -136,7 +145,7 @@ def output_tweet_statistics(hashtags):
     print 'Winning tweet length standard deviation: %s' % winning_tweet_std_dev
 
 
-def build_character_vocabulary(hashtags):
+def build_character_vocabulary(hashtags, directory=SEMEVAL_HUMOR_TRAIN_DIR):
     '''Find all characters special or alphabetical that appear in the dataset.
     Construct a vocabulary that assigns a unique index to each character and
     return that vocabulary. Vocabulary does not include anything with a backslash.'''
@@ -144,7 +153,7 @@ def build_character_vocabulary(hashtags):
     characters.append('')
     #Create list of all characters that appear in dataset.
     for hashtag in hashtags:
-        with open(SEMEVAL_HUMOR_TRAIN_DIR + hashtag + '.tsv') as tsv:
+        with open(directory + hashtag + '.tsv') as tsv:
             for line in csv.reader(tsv, dialect='excel-tab'):
                 for char in line[1]:
                     # If character hasn't been seen before, add it to the vocabulary.
@@ -157,14 +166,14 @@ def build_character_vocabulary(hashtags):
     return vocabulary
 
 
-def save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag):
+def save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag, directory=HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR):
     print 'Saving data for hashtag %s' % hashtag
     # Create directories if they don't exist
-    if not os.path.exists(HUMOR_TWEET_PAIR_DIR):
-        os.makedirs(HUMOR_TWEET_PAIR_DIR)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
     # Save hashtag tweet pair data into training or testing folders depending on training_hashtag
-    np.save(HUMOR_TWEET_PAIR_DIR + hashtag + '_pairs.npy', np_tweet_pairs)
-    np.save(HUMOR_TWEET_PAIR_DIR + hashtag + '_labels.npy', np_tweet_pair_labels)
+    np.save(directory + hashtag + '_pairs.npy', np_tweet_pairs)
+    np.save(directory + hashtag + '_labels.npy', np_tweet_pair_labels)
 
 
 def test_reconstruct_tweets_from_file():
@@ -191,17 +200,6 @@ def test_reconstruct_tweets_from_file():
                         if tweet <= max_tweet_size:
                             assert tweet in tweets
 
-
-def test_training_and_testing_sets_are_disjoint():
-    for (dirpath, dirnames, filenames) in walk(HUMOR_TWEET_PAIR_DIR):
-        for (dirpath2, dirnames2, filenames2) in walk(test_output_dir):
-            for filename in filenames:
-                for filename2 in filenames2:
-                    assert filename != filename2
-    
-    
-    
-    
     
 if __name__ == '__main__':
     main()

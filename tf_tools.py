@@ -9,6 +9,7 @@ from tools import load_hashtag_data
 from tools import expected_value
 from tools import load_tweets_from_hashtag
 from tools import find_indices_larger_than_threshold
+from tools import extract_tweet_pair_from_hashtag_datas
 from config import CHAR_2_PHONE_MODEL_DIR
 
 GPU_OPTIONS = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
@@ -17,6 +18,7 @@ MAX_WORD_SIZE = 20
 MAX_PRONUNCIATION_SIZE = 20
 PHONE_CHAR_EMB_DIM = 30
 PHONE_ENCODER_LSTM_EMB_DIM = 200
+HUMOR_DROPOUT = 1
 
 
 def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
@@ -140,24 +142,30 @@ def generate_phonetic_embs_from_words(words, char_to_index_path, phone_to_index_
 def create_tensorboard_visualization(model_name):
     """Saves the Tensorflow graph of your model, so you can view it in a TensorBoard console."""
     print 'Creating Tensorboard visualization'
-    writer = tf.train.SummaryWriter("/tmp/" + model_name + "/")
+    writer = tf.summary.FileWriter("/tmp/" + model_name + "/")
     writer.add_graph(tf.get_default_graph())
 
 
-def predict_on_hashtag(sess, model_vars, hashtag_name, hashtag_dir, error_analysis_stats=None):
+def predict_on_hashtag(sess, model_vars, hashtag_name, hashtag_dir, hashtag_datas, error_analysis_stats=None):
     """Predicts on a hashtag. Returns the accuracy of predictions on all tweet pairs and returns
     a list. The list contains the predictions on all tweet pairs, and tweet ids for the first and second tweets in
     each pair. If error analysis stats are provided, the function will print the tweet pairs the model performed the worst
     on. error_analysis_stats should be a string and a number. The string is the location where Semeval hashtag .tsv files are kept(training or testing).
     The number is the number of worst tweet pairs to print."""
     print 'Predicting on hashtag %s' % hashtag_name
-    [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_rating, tf_batch_size, tf_hashtag, tf_output_prob] = model_vars
+    np_first_tweets_char, np_second_tweets_char = extract_tweet_pair_from_hashtag_datas(hashtag_datas, hashtag_name)
+
+    [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_rating, tf_batch_size, tf_hashtag, tf_output_prob, tf_dropout_rate,
+     tf_tweet1, tf_tweet2] = model_vars
     np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag = load_hashtag_data(hashtag_dir, hashtag_name)
     np_predictions, np_output_prob = sess.run([tf_predictions, tf_output_prob],
                                                     feed_dict={tf_first_input_tweets: np_first_tweets,
                                                                  tf_second_input_tweets: np_second_tweets,
                                                                  tf_batch_size: np_first_tweets.shape[0],
-                                                                 tf_hashtag: np_hashtag})
+                                                                 tf_hashtag: np_hashtag,
+                                                                 tf_dropout_rate: 1.0,
+                                                                 tf_tweet1: np_first_tweets_char,
+                                                                 tf_tweet2: np_second_tweets_char})
 
     # # Error analysis. Generate expected value for each tweet pair. Look for worst, then for second worst, to N worst
     # if error_analysis_stats is not None:
