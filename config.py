@@ -44,3 +44,8 @@ HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR = os.path.join(DATA_DIR, 'trial_tweet_pair_
 # Boost tree humor model paths
 BOOST_TREE_TWEET_PAIR_TRAINING_DIR = os.path.join(DATA_DIR, 'training_tweet_pair_tree_data/')
 BOOST_TREE_TWEET_PAIR_TESTING_DIR = os.path.join(DATA_DIR, 'testing_tweet_pair_tree_data/')
+HUMOR_MAX_WORDS_IN_TWEET = 20  # All winning tweets are under 30 words long
+HUMOR_MAX_WORDS_IN_HASHTAG = 8
+GLOVE_EMB_SIZE = 200
+TWEET_SIZE = 140
+PHONETIC_EMB_SIZE = 200

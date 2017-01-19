@@ -1,20 +1,16 @@
 """David Donahue 2016. This is a place to keep functions that more than one script could potentially use.
 This makes a function easily accessible and independent of the application. Functions
 here are dependent on data stored in the data/ folder."""
-from os import walk
-import os
-import numpy as np
 import cPickle as pickle
-import random
 import csv
+import os
+import random
+from os import walk
+
 import nltk
+import numpy as np
 
-
-HUMOR_MAX_WORDS_IN_TWEET = 20  # All winning tweets are under 30 words long
-HUMOR_MAX_WORDS_IN_HASHTAG = 8
-GLOVE_SIZE = 200
-PHONETIC_EMB_SIZE = 200
-TWEET_SIZE = 140
+from config import TWEET_SIZE
 
 
 def extract_tweet_pair_from_hashtag_datas(hashtag_datas, hashtag_name, tweet_size=TWEET_SIZE):
@@ -22,8 +18,8 @@ def extract_tweet_pair_from_hashtag_datas(hashtag_datas, hashtag_name, tweet_siz
         current_hashtag_name = hashtag_data[0]
         if current_hashtag_name == hashtag_name:
             np_tweet_pairs = hashtag_data[1]
-            np_first_tweets = np_tweet_pairs[:, :TWEET_SIZE]
-            np_second_tweets = np_tweet_pairs[:, TWEET_SIZE:]
+            np_first_tweets = np_tweet_pairs[:, :tweet_size]
+            np_second_tweets = np_tweet_pairs[:, tweet_size:]
             return np_first_tweets, np_second_tweets
     return None
 
@@ -64,13 +60,42 @@ def remove_hashtag_from_tweets(tweets):
 
 
 def extract_tweet_pairs(tweets, tweet_ranks, tweet_ids):
-    """Creates pairs of the form [first_tweet, first_tweet_id, second_tweet, second_tweet_id, first_tweet_is_funnier]
-    and """
+    """Creates pairs of the form [first_tweet, first_tweet_id, second_tweet, second_tweet_id, first_tweet_is_funnier]"""
+    winner, winner_ids, top_ten, top_ten_ids, non_winners, non_winner_ids = \
+        divide_tweets_by_rank(tweets, tweet_ids, tweet_ranks)
+
+    # Create pairs from non-winning and top-ten tweets.
     pairs = []
+    id_pairs = []
+    for non_winning_tweet, non_winning_id in zip(non_winners, non_winner_ids):
+        for top_ten_tweet, top_ten_id in zip(winner + top_ten, winner_ids + top_ten_ids):
+            # Create pair
+            funnier_tweet_first = bool(random.getrandbits(1))
+            if funnier_tweet_first:
+                pairs.append([top_ten_tweet, top_ten_id, non_winning_tweet, non_winning_id, 1])
+            else:
+                pairs.append([non_winning_tweet, non_winning_id, top_ten_tweet, top_ten_id, 0])
+    # Create pairs from top-ten and winning tweet.
+    for top_ten_tweet, top_ten_id in zip(top_ten, top_ten_ids):
+        for winning_tweet, winning_id in zip(winner, winner_ids):
+            # Create pair
+            funnier_tweet_first = bool(random.getrandbits(1))
+            if funnier_tweet_first:
+                pairs.append([winning_tweet, winning_id, top_ten_tweet, top_ten_id, 1])
+            else:
+                pairs.append([top_ten_tweet, top_ten_id, winning_tweet, winning_id, 0])
+    return pairs
+
+
+def divide_tweets_by_rank(tweets, tweet_ids, tweet_ranks):
+    """Tweets are labelled as 'winner', 'top-ten' or 'non-winner'.
+    Divide tweets by their rank and return lists of tweets from
+    each rank along with their corresponding ids. Returns six
+    lists: winner tweets, winner tweet ids, top ten tweets,
+    top ten tweet ids, non winner tweets, non winner tweet ids."""
     non_winners = []
     top_ten = []
     winner = []
-    id_pairs = []
     non_winner_ids = []
     top_ten_ids = []
     winner_ids = []
@@ -90,25 +115,7 @@ def extract_tweet_pairs(tweets, tweet_ranks, tweet_ids):
             winner_ids.append(tweet_id)
         else:
             print 'Error: Invalid tweet rank'
-    # Create pairs from non-winning and top-ten tweets.
-    for non_winning_tweet, non_winning_id in zip(non_winners, non_winner_ids):
-        for top_ten_tweet, top_ten_id in zip(winner + top_ten, winner_ids + top_ten_ids):
-            # Create pair
-            funnier_tweet_first = bool(random.getrandbits(1))
-            if funnier_tweet_first:
-                pairs.append([top_ten_tweet, top_ten_id, non_winning_tweet, non_winning_id, 1])
-            else:
-                pairs.append([non_winning_tweet, non_winning_id, top_ten_tweet, top_ten_id, 0])
-    # Create pairs from top-ten and winning tweet.
-    for top_ten_tweet, top_ten_id in zip(top_ten, top_ten_ids):
-        for winning_tweet, winning_id in zip(winner, winner_ids):
-            # Create pair
-            funnier_tweet_first = bool(random.getrandbits(1))
-            if funnier_tweet_first:
-                pairs.append([winning_tweet, winning_id, top_ten_tweet, top_ten_id, 1])
-            else:
-                pairs.append([top_ten_tweet, top_ten_id, winning_tweet, winning_id, 0])
-    return pairs
+    return winner, winner_ids, top_ten, top_ten_ids, non_winners, non_winner_ids
 
 
 def format_text_with_hashtag(text, hashtag_replace=None):
@@ -194,8 +201,8 @@ def convert_words_to_indices(words, char_to_index, max_word_size=20):
 
 
 def load_hashtag_data_and_vocabulary(tweet_pairs_path, char_to_index_path):
-    '''Load in tweet pairs per hashtag. Create a list of [hashtag_name, pairs, labels] entries.
-    Return tweet pairs, tweet labels, char_to_index.cpkl and vocabulary size.'''
+    """Load in tweet pairs per hashtag. Create a list of [hashtag_name, pairs, labels] entries.
+    Return tweet pairs, tweet labels, char_to_index.cpkl and vocabulary size."""
     hashtag_datas = []
     for (dirpath, dirnames, filenames) in walk(tweet_pairs_path):
         for filename in filenames:
@@ -213,14 +220,13 @@ def load_hashtag_data_and_vocabulary(tweet_pairs_path, char_to_index_path):
     return hashtag_datas, char_to_index, vocab_size
 
 
-
 def invert_dictionary(dictionary):
     inv_dictionary = {v: k for k, v in dictionary.iteritems()}
     return inv_dictionary
 
 
 def get_hashtag_file_names(tweet_pairs_dir):
-    '''Returns .tsv file name for each hashtag in the dataset (extension omitted).'''
+    """Returns .tsv file name for each hashtag in the dataset (extension omitted)."""
     f = []
     for (dirpath, dirnames, filenames) in walk(tweet_pairs_dir):
         f.extend(filenames)

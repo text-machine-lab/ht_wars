@@ -94,12 +94,9 @@ data/*
 *~
 
 .idea/
-char_model/char_to_index.cpkl
-phoneme_model/cmu_char_to_index.cpkl
-phoneme_model/cmu_phone_to_index.cpkl
-phoneme_model/cmu_pronunciations.npy
-phoneme_model/cmu_words.npy
-phoneme_model/saved_models/
-sound_meaning_model/glove_embs.npy
-sound_meaning_model/glove_words.cpkl
-sound_meaning_model/phonetic_embs.npy
+keras_char_humor/char_to_index.cpkl
+tf_char_to_phoneme/cmu_char_to_index.cpkl
+tf_char_to_phoneme/cmu_phone_to_index.cpkl
+tf_char_to_phoneme/cmu_pronunciations.npy
+tf_char_to_phoneme/cmu_words.npy
+tf_char_to_phoneme/saved_models/

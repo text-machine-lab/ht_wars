@@ -5,7 +5,7 @@ import cPickle as pickle
 import numpy as np
 import random
 
-from config import DATA_DIR
+from config import DATA_DIR, HUMOR_MAX_WORDS_IN_TWEET, HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE
 from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
 from config import SEMEVAL_HUMOR_TRAIN_DIR
 from config import TWEET_PAIR_LABEL_RANDOM_SEED
@@ -13,7 +13,7 @@ from humor_processing import build_vocabulary
 from humor_processing import convert_tweet_to_embeddings
 from humor_processing import create_dictionary_mapping
 from humor_processing import look_up_glove_embeddings
-from tools import GLOVE_SIZE
+from tools import GLOVE_EMB_SIZE
 from tools import HUMOR_MAX_WORDS_IN_HASHTAG
 from tools import HUMOR_MAX_WORDS_IN_TWEET
 from tools import PHONETIC_EMB_SIZE
@@ -122,7 +122,7 @@ def test_saved_files():
     print first_word_phonetic
 
     print list(np_hashtag.shape)
-    assert list(np_hashtag.shape) == [np_first_tweets.shape[0], (GLOVE_SIZE + PHONETIC_EMB_SIZE) * HUMOR_MAX_WORDS_IN_HASHTAG]
+    assert list(np_hashtag.shape) == [np_first_tweets.shape[0], (GLOVE_EMB_SIZE + PHONETIC_EMB_SIZE) * HUMOR_MAX_WORDS_IN_HASHTAG]
     assert np_first_tweets.shape == np_second_tweets.shape
     assert np_winner_labels.shape[0] == np_first_tweets.shape[0]
     assert len(index_to_word) >= len(word_to_glove)
@@ -130,7 +130,7 @@ def test_saved_files():
     for key in word_to_glove:
         assert key in index_to_word
 
-    word_emb_size = GLOVE_SIZE + PHONETIC_EMB_SIZE
+    word_emb_size = GLOVE_EMB_SIZE + PHONETIC_EMB_SIZE
 
     # Print out hashtag from embeddings
     glove_reconstructed_hashtag, phone_reconstructed_hashtag = reconstruct_text_from_gloves(np_hashtag, HUMOR_MAX_WORDS_IN_HASHTAG,
@@ -151,8 +151,8 @@ def reconstruct_text_from_gloves(np_text, max_len_text, word_emb_size, word_to_g
     reconstructed_tokens_glove = []
     reconstructed_tokens_phone = []
     for i in range(max_len_text):
-        np_glove_emb = np_text[tweet_index, i*word_emb_size:i*word_emb_size+GLOVE_SIZE]
-        np_phone_emb = np_text[tweet_index, i*word_emb_size+GLOVE_SIZE:i*word_emb_size+GLOVE_SIZE+PHONETIC_EMB_SIZE]
+        np_glove_emb = np_text[tweet_index, i*word_emb_size:i*word_emb_size + GLOVE_EMB_SIZE]
+        np_phone_emb = np_text[tweet_index, i*word_emb_size + GLOVE_EMB_SIZE:i * word_emb_size + GLOVE_EMB_SIZE + PHONETIC_EMB_SIZE]
         glove_embedding_exists = False
         phone_embedding_exists = False
         for word in word_to_glove:

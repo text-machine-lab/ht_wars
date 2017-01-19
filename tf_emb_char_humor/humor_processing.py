@@ -6,7 +6,8 @@ For each hashtag, it will generate and save a numpy array for each tweet. The nu
 be shaped m x n x e where m is the number of tweet pairs in the hashtag, n is the max tweet size and
 e is the concatenated size of both the phonetic and glove embeddings."""
 from tools import get_hashtag_file_names
-from config import SEMEVAL_HUMOR_TRAIN_DIR
+from config import SEMEVAL_HUMOR_TRAIN_DIR, HUMOR_MAX_WORDS_IN_TWEET, HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_EMB_SIZE, \
+    PHONETIC_EMB_SIZE
 from config import SEMEVAL_HUMOR_TRIAL_DIR
 from config import WORD_VECTORS_FILE_PATH
 from config import HUMOR_INDEX_TO_WORD_FILE_PATH
@@ -16,7 +17,7 @@ from config import TWEET_PAIR_LABEL_RANDOM_SEED
 from tools import extract_tweet_pairs
 from tools import HUMOR_MAX_WORDS_IN_TWEET
 from tools import HUMOR_MAX_WORDS_IN_HASHTAG
-from tools import GLOVE_SIZE
+from tools import GLOVE_EMB_SIZE
 from tools import PHONETIC_EMB_SIZE
 from tools import load_tweets_from_hashtag
 from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
@@ -131,11 +132,11 @@ def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, twe
         labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
         print 'For each tweet in pair, converting to GloVe/phonetic vector format'
         np_label = np.array(labels)
-        np_hashtag_gloves_col = convert_tweet_to_embeddings([formatted_hashtag_name], word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_SIZE, PHONETIC_EMB_SIZE)
+        np_hashtag_gloves_col = convert_tweet_to_embeddings([formatted_hashtag_name], word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
         np_hashtag_gloves = np.repeat(np_hashtag_gloves_col, len(tweet1), axis=0)
 
-        np_tweet1_gloves = convert_tweet_to_embeddings(tweet1, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET, GLOVE_SIZE, PHONETIC_EMB_SIZE)
-        np_tweet2_gloves = convert_tweet_to_embeddings(tweet2, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET, GLOVE_SIZE, PHONETIC_EMB_SIZE)
+        np_tweet1_gloves = convert_tweet_to_embeddings(tweet1, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET, GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
+        np_tweet2_gloves = convert_tweet_to_embeddings(tweet2, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET, GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
         # Save
         print 'Saving embedding vector tweet pairs with labels'
         np.save(open(tweet_pair_output_dir + hashtag_name + '_label.npy', 'wb'), np_label)
