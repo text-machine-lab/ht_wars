@@ -8,10 +8,12 @@ TWITTERHAWK_ADDRESS = 'http://twitterhawk.deephawk.org'
 
 
 class TwitterHawk(object):
-    def __init__(self, address):
+    def __init__(self, address, separate=True):
         self.address = address
 
         self.address_analyze = os.path.join(self.address, 'analyze')
+        if separate:
+            self.address_analyze += '?separate=1'
 
     def analyze(self, tweets):
         """

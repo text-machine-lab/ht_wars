@@ -46,10 +46,12 @@ def generate_tree_model_input_data_from_dir(directory, output_dir):
         list_of_features = []
         print 'Calculating tweet pair sentiment'
         list_of_features.append(calculate_tweet_pair_sentiment(tweets, tweet1, tweet2))
+
         print 'Calculating hashtag sentiment'
         formatted_hashtag = ' '.join(hashtag_name.split('_')).lower()
         print 'Formatted hashtag: %s' % formatted_hashtag
         list_of_features.append(calculate_hashtag_sentiment(len(tweet1), formatted_hashtag))
+
         print 'Calculating tweet pair lengths'
         list_of_features.append(calculate_tweet_lengths_per_pair(tweet1, tweet2))
 
@@ -65,9 +67,9 @@ def generate_tree_model_input_data_from_dir(directory, output_dir):
 
 
 def calculate_hashtag_sentiment(number_of_examples, hashtag):
-    np_hashtag_sentiment = np.empty([number_of_examples, 1])
     hashtag_sentiment = calculate_sentiment_value_of_lines([hashtag])[0]
-    np_hashtag_sentiment.fill(hashtag_sentiment)
+
+    np_hashtag_sentiment = np.tile(hashtag_sentiment, (number_of_examples, 1))
     return np_hashtag_sentiment
 
 
@@ -90,7 +92,12 @@ def calculate_sentiment_value_of_lines(tweets):
     th = TwitterHawk(TWITTERHAWK_ADDRESS)
     tweet_sentiment_input = [{'id': 1234, 'text': tweet} for tweet in tweets]
     tweet_sentiments = th.analyze(tweet_sentiment_input)
-    return tweet_sentiments
+
+    result = [
+        (ts['negative'], ts['positive'], ts['neutral'])
+        for ts in tweet_sentiments
+        ]
+    return result
 
 
 def calculate_tweet_pair_sentiment(tweets, tweet1, tweet2):
@@ -101,11 +108,12 @@ def calculate_tweet_pair_sentiment(tweets, tweet1, tweet2):
     tweet_to_sentiment = {}
     for i in range(len(tweets)):
         tweet_to_sentiment[tweets[i]] = tweet_sentiments[i]
+
     tweet_pair_sentiments = []
     for i in range(len(tweet1)):
         tweet1_sentiment = tweet_to_sentiment[tweet1[i]]
         tweet2_sentiment = tweet_to_sentiment[tweet2[i]]
-        tweet_pair_sentiments.append([tweet1_sentiment, tweet2_sentiment])
+        tweet_pair_sentiments.append(tweet1_sentiment + tweet2_sentiment)
     np_data = np.array(tweet_pair_sentiments)
     return np_data
 
