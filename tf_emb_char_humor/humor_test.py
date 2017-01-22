@@ -7,22 +7,24 @@ import random
 
 from config import DATA_DIR, HUMOR_MAX_WORDS_IN_TWEET, HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE
 from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
+from config import HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
 from config import SEMEVAL_HUMOR_TRAIN_DIR
 from config import TWEET_PAIR_LABEL_RANDOM_SEED
 from humor_processing import build_vocabulary
 from humor_processing import convert_tweet_to_embeddings
 from humor_processing import create_dictionary_mapping
 from humor_processing import look_up_glove_embeddings
-from tools import GLOVE_EMB_SIZE
-from tools import HUMOR_MAX_WORDS_IN_HASHTAG
-from tools import HUMOR_MAX_WORDS_IN_TWEET
-from tools import PHONETIC_EMB_SIZE
-from tools import format_text_with_hashtag
+from config import GLOVE_EMB_SIZE
+from config import HUMOR_MAX_WORDS_IN_HASHTAG
+from config import HUMOR_MAX_WORDS_IN_TWEET
+from config import PHONETIC_EMB_SIZE
+from tools import format_text_for_embedding_model
 from tools import load_tweets_from_hashtag
 from tools import extract_tweet_pairs
 
 
 def main():
+    test_embedding_character_labels_match()
     test_print_words_without_gloves()
     test_build_vocabulary()
     test_format_text_with_hashtag()
@@ -30,15 +32,23 @@ def main():
     # test_look_up_glove_embeddings_and_convert_tweets_to_gloves()
     test_saved_files()
     test_create_dictionary_mapping()
-    test_embedding_character_tweet_pairs_match()
+    test_extract_tweet_pairs()
 
     print 'Tests successful'
 
 
-def test_embedding_character_tweet_pairs_match():
-    print 'TEST: test_embedding_character_tweet_pairs_match'
-    """Print tweet pairs for embedding and character model inputs
-    and see if they were produced correctly."""
+def test_embedding_character_labels_match():
+    print 'TEST: test_embedding_character_labels_match'
+    example_hashtag = 'Cat_History'
+    np_emb_labels = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_label.npy'))
+    np_char_labels = np.load(open(HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR + example_hashtag + '_labels.npy'))
+    assert np.array_equal(np_emb_labels, np_char_labels)
+
+
+def test_extract_tweet_pairs():
+    print 'TEST: test_extract_tweet_pairs'
+    """Check if extract_tweet_pairs function returns same pairs
+    if given the same seed twice."""
     hashtag_name = 'America_In_4_Words'
     tweets, labels, tweet_ids = load_tweets_from_hashtag(SEMEVAL_HUMOR_TRAIN_DIR + hashtag_name + '.tsv',
                                                          explicit_hashtag='')
@@ -63,6 +73,8 @@ def test_embedding_character_tweet_pairs_match():
     assert tweet2 == copy_tweet2
     assert tweet2_id == copy_tweet2_id
     assert labels == copy_labels
+
+
 
 
 def test_print_words_without_gloves():
@@ -220,7 +232,7 @@ def test_build_vocabulary():
 def test_format_text_with_hashtag():
     print 'TEST: test_format_text_with_hashtag'
     text = 'The methlamine must not stop flowing. #2014TheBreakingBad show'
-    formatted_text = format_text_with_hashtag(text)
+    formatted_text = format_text_for_embedding_model(text)
     print formatted_text
     print formatted_text.split()
     assert formatted_text == '2014 the breaking bad # the methlamine must not stop flowing show'

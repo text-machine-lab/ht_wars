@@ -20,24 +20,13 @@ from tf_tools import MAX_PRONUNCIATION_SIZE
 
 def main():
     print 'Starting program'
-    run_command_specified_from_command_line()
+    np_words, np_pronunciations, char_to_index, phone_to_index = extract_CMU_dataset(max_word_size=MAX_WORD_SIZE)
+    save_numpy_array(np_words, CMU_NP_WORDS_FILE_PATH)
+    save_numpy_array(np_pronunciations, CMU_NP_PRONUNCIATIONS_FILE_PATH)
+    save_pickle_file(char_to_index, CMU_CHAR_TO_INDEX_FILE_PATH)
+    save_pickle_file(phone_to_index, CMU_PHONE_TO_INDEX_FILE_PATH)
     print_word_pronunciation_pairs_from_file()
     print 'Done!'
-
-
-def run_command_specified_from_command_line():
-    # Run specified command (sys.argv[1])
-    command = sys.argv[1]
-    if command == 'extract_dataset':
-        np_words, np_pronunciations, char_to_index, phone_to_index = extract_CMU_dataset(max_word_size=MAX_WORD_SIZE)
-        save_numpy_array(np_words, CMU_NP_WORDS_FILE_PATH)
-        save_numpy_array(np_pronunciations, CMU_NP_PRONUNCIATIONS_FILE_PATH)
-        save_pickle_file(char_to_index, CMU_CHAR_TO_INDEX_FILE_PATH)
-        save_pickle_file(phone_to_index, CMU_PHONE_TO_INDEX_FILE_PATH)
-    elif command == 'train':
-        train_model()
-    elif command == 'help':
-        print_help_info()
 
 
 def save_numpy_array(np_array, filename):
@@ -185,10 +174,6 @@ def print_word_pronunciation_pairs_from_file():
         pronunciation = ' '.join([index_to_phone[np_pronunciation[j]] for j in range(MAX_PRONUNCIATION_SIZE)])
         
         print word, pronunciation
-
-
-def train_model():
-    print 'Training model'
 
 
 

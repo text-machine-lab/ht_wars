@@ -44,6 +44,9 @@ def extract_tweet_pairs_from_file(hashtag_file):
 
 
 def remove_hashtag_from_tweets(tweets):
+    """Takes a list of tweets. For each tweet, if it contains
+    a hashtag, that hashtag is removed. Returns the tweets
+    without hashtags. Copies input tweets."""
     tweets_without_hashtags = []
     for tweet in tweets:
         tweet_without_hashtags = ''
@@ -118,7 +121,7 @@ def divide_tweets_by_rank(tweets, tweet_ids, tweet_ranks):
     return winner, winner_ids, top_ten, top_ten_ids, non_winners, non_winner_ids
 
 
-def format_text_with_hashtag(text, hashtag_replace=None):
+def format_text_for_embedding_model(text, hashtag_replace=None):
     """Split up existing hashtags. If hashtag_replace=None, then hashtags
     existing in tweet will be broken up and placed at the beginning. If
     hashtag_replace='', no hashtag will be added to the beginning. If
@@ -173,7 +176,7 @@ def load_tweets_from_hashtag(filename, explicit_hashtag=None):
         for line in tsvread:
             id = line[0]
             tweet = line[1]
-            formatted_tweet = format_text_with_hashtag(tweet, hashtag_replace=explicit_hashtag)
+            formatted_tweet = format_text_for_embedding_model(tweet, hashtag_replace=explicit_hashtag)
             tweet_tokens = nltk.word_tokenize(formatted_tweet)
             tweet_ids.append(int(id))
             tweets.append(' '.join(tweet_tokens).lower())

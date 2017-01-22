@@ -14,6 +14,18 @@ from twitter_hawk import TwitterHawk
 from twitter_hawk import TWITTERHAWK_ADDRESS
 from config import SEMEVAL_HUMOR_TRIAL_DIR
 
+# XGBoost Feature Bucket:
+# Length of tweet in tokens
+# Sentiment tweet
+# Sentiment of hashtag
+# Distance of average GloVe of tweet with hashtag
+# Average distance between token GloVe in tweet to all other tweets
+# Number of tokens in hashtag
+# Number of verbs, other POS
+# Number of out-of-vocabulary words for GloVe embedding
+# Number of capital letters
+# Is hashtag in the beginning or the end
+
 
 def main():
     if not os.path.exists(BOOST_TREE_TWEET_PAIR_TRAINING_DIR):

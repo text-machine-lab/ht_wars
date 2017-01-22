@@ -1,5 +1,5 @@
 """David Donahue 2016. Testing script for tree model functionality."""
-from tree_model_processing import calculate_sentiment_value_of_lines
+from tree_processing import calculate_sentiment_value_of_lines
 from tools import remove_hashtag_from_tweets
 
 

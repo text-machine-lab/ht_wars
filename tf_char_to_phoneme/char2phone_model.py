@@ -29,8 +29,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 # Model parameters.
 batch_size = 100
 training_fraction = .6
-learning_rate = 0.0003
-n_epochs = 10
+learning_rate = 0.0005
+n_epochs = 15
 
 
 def main():

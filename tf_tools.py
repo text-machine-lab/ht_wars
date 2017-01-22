@@ -159,13 +159,13 @@ def predict_on_hashtag(sess, model_vars, hashtag_name, hashtag_dir, hashtag_data
      tf_tweet1, tf_tweet2] = model_vars
     np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag = load_hashtag_data(hashtag_dir, hashtag_name)
     np_predictions, np_output_prob = sess.run([tf_predictions, tf_output_prob],
-                                                    feed_dict={tf_first_input_tweets: np_first_tweets,
-                                                                 tf_second_input_tweets: np_second_tweets,
-                                                                 tf_batch_size: np_first_tweets.shape[0],
-                                                                 tf_hashtag: np_hashtag,
-                                                                 tf_dropout_rate: 1.0,
-                                                                 tf_tweet1: np_first_tweets_char,
-                                                                 tf_tweet2: np_second_tweets_char})
+                                              feed_dict={tf_first_input_tweets: np_first_tweets,
+                                                         tf_second_input_tweets: np_second_tweets,
+                                                         tf_batch_size: np_first_tweets.shape[0],
+                                                         tf_hashtag: np_hashtag,
+                                                         tf_dropout_rate: 1.0,
+                                                         tf_tweet1: np_first_tweets_char,
+                                                         tf_tweet2: np_second_tweets_char})
 
     # # Error analysis. Generate expected value for each tweet pair. Look for worst, then for second worst, to N worst
     # if error_analysis_stats is not None:

@@ -15,10 +15,10 @@ from config import HUMOR_WORD_TO_GLOVE_FILE_PATH
 from config import HUMOR_WORD_TO_PHONETIC_FILE_PATH
 from config import TWEET_PAIR_LABEL_RANDOM_SEED
 from tools import extract_tweet_pairs
-from tools import HUMOR_MAX_WORDS_IN_TWEET
-from tools import HUMOR_MAX_WORDS_IN_HASHTAG
-from tools import GLOVE_EMB_SIZE
-from tools import PHONETIC_EMB_SIZE
+from config import HUMOR_MAX_WORDS_IN_TWEET
+from config import HUMOR_MAX_WORDS_IN_HASHTAG
+from config import GLOVE_EMB_SIZE
+from config import PHONETIC_EMB_SIZE
 from tools import load_tweets_from_hashtag
 from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
 from config import HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR
