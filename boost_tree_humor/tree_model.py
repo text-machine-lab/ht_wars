@@ -18,12 +18,12 @@ ex.observers.append(MongoObserver.create(url=MONGO_ADDRESS, db_name=ex_name))
 
 @ex.config
 def config():
-    max_depth = 10
-    eta = 0.03  # learning_rate
-    gamma = 1  # min_split_loss
-    reg_lambda = 0
+    max_depth = 12
+    eta = 0.003  # learning_rate
+    gamma = 3  # min_split_loss
+    reg_lambda = 0.007
+    num_round = 19
     objective = 'binary:logistic'
-    num_round = 5
     silent = 0
 
 
