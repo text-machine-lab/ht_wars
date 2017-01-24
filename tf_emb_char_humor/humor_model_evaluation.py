@@ -31,7 +31,7 @@ def main():
         hashtag_datas, char_to_index, vocab_size = load_hashtag_data_and_vocabulary(tweet_char_pair_dir,
                                                                                     HUMOR_CHAR_TO_INDEX_FILE_PATH)
 
-        model_vars = humor_model.build_embedding_humor_model(vocab_size)
+        model_vars = humor_model.build_humor_model(vocab_size)
 
         sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
         saver = tf.train.Saver(max_to_keep=10)
@@ -56,17 +56,17 @@ def write_predictions_to_file(filename, np_predictions, first_tweet_ids, second_
     """Written for evaluation script, this function writes predictions of a humor
     model on tweet pairs to file. Each line corresponds to a tweet pair, and takes
     on the form: <tweet1_id>\t<tweet2_id>\t<first_tweet_is_funnier>\n"""
-    file = open(filename, 'wb')
+    f = open(filename, 'wb')
     for index in range(len(first_tweet_ids)):
         first_tweet_is_funnier = np_predictions[index]
         first_tweet_id = first_tweet_ids[index]
         second_tweet_id = second_tweet_ids[index]
-        file.write(str(first_tweet_id))
-        file.write('\t')
-        file.write(str(second_tweet_id))
-        file.write('\t')
-        file.write(str(first_tweet_is_funnier))
-        file.write('\n')
+        f.write(str(first_tweet_id))
+        f.write('\t')
+        f.write(str(second_tweet_id))
+        f.write('\t')
+        f.write(str(first_tweet_is_funnier))
+        f.write('\n')
 
 if __name__ == '__main__':
     main()

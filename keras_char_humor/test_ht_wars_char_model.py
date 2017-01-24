@@ -9,7 +9,8 @@ from config import HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
 import numpy as np
 from os import walk
 
-class TestHTWarsCharModel():
+
+class TestHTWarsCharModel:
     @classmethod
     def setup_class(self):
         print 'Setting up  char model testing'

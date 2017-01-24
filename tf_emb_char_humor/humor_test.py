@@ -20,7 +20,7 @@ from config import HUMOR_MAX_WORDS_IN_TWEET
 from config import PHONETIC_EMB_SIZE
 from tools import format_text_for_embedding_model
 from tools import load_tweets_from_hashtag
-from tools import extract_tweet_pairs
+from tools import extract_tweet_pairs_by_rank
 
 
 def main():
@@ -53,7 +53,7 @@ def test_extract_tweet_pairs():
     tweets, labels, tweet_ids = load_tweets_from_hashtag(SEMEVAL_HUMOR_TRAIN_DIR + hashtag_name + '.tsv',
                                                          explicit_hashtag='')
     random.seed(TWEET_PAIR_LABEL_RANDOM_SEED)
-    tweet_pairs = extract_tweet_pairs(tweets, labels, tweet_ids)
+    tweet_pairs = extract_tweet_pairs_by_rank(tweets, labels, tweet_ids)
     tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
     tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
     tweet2 = [tweet_pair[2] for tweet_pair in tweet_pairs]
@@ -61,7 +61,7 @@ def test_extract_tweet_pairs():
     labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
 
     random.seed(TWEET_PAIR_LABEL_RANDOM_SEED)
-    copy_tweet_pairs = extract_tweet_pairs(tweets, labels, tweet_ids)
+    copy_tweet_pairs = extract_tweet_pairs_by_rank(tweets, labels, tweet_ids)
     copy_tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
     copy_tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
     copy_tweet2 = [tweet_pair[2] for tweet_pair in tweet_pairs]
@@ -184,22 +184,6 @@ def reconstruct_text_from_gloves(np_text, max_len_text, word_emb_size, word_to_g
     glove_reconstructed_text = ' '.join(reconstructed_tokens_glove)
     phone_reconstructed_text = ' '.join(reconstructed_tokens_phone)
     return glove_reconstructed_text, phone_reconstructed_text
-
-
-def test_look_up_glove_embeddings_and_convert_tweets_to_gloves():
-    print 'TEST: test_look_up_glove_embeddings_and_convert_tweets_to_gloves'
-    index_to_word = ['banana', 'apple', 'car']
-    word_to_glove = look_up_glove_embeddings(index_to_word)
-    np_banana_glove = np.array(word_to_glove['banana'])
-    np_apple_glove = np.array(word_to_glove['apple'])
-    np_car_glove = np.array(word_to_glove['car'])
-    assert np.dot(np_apple_glove, np_banana_glove) > np.dot(np_apple_glove, np_car_glove)
-    assert np.dot(np_apple_glove, np_banana_glove) > np.dot(np_banana_glove, np_car_glove)
-
-    np_converted_glove = convert_tweet_to_embeddings(['apple banana'], word_to_glove, HUMOR_MAX_WORDS_IN_TWEET, 200)
-    assert np.array_equal(np_converted_glove[0, :200], np_apple_glove)
-    assert np.array_equal(np_converted_glove[0, 200:400], np_banana_glove)
-    assert np.array_equal(np_converted_glove[0, 400:600], np.zeros([200]))
 
 
 def test_load_tweets_from_hashtag():

@@ -1,4 +1,4 @@
-'''Test script for char2phone_processing.py which uses pytest.'''
+"""Test script for char2phone_processing.py which uses pytest."""
 
 import numpy as np
 import cPickle as pickle

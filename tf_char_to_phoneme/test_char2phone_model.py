@@ -1,4 +1,4 @@
-'''David Donahue 2016. This script tests the implementation of the character-to-phoneme model.'''
+"""David Donahue 2016. This script tests the implementation of the character-to-phoneme model."""
 
 from char2phone_processing import CMU_NP_WORDS_FILE_PATH
 from char2phone_processing import CMU_NP_PRONUNCIATIONS_FILE_PATH

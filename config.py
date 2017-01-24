@@ -16,6 +16,7 @@ WORD_VECTORS_FILE_PATH = os.path.join(DATA_DIR, 'glove.twitter.27B/glove.twitter
 # Main #HashtagWars dataset paths
 SEMEVAL_HUMOR_TRAIN_DIR = os.path.join(DATA_DIR, 'train_dir/train_data/')
 SEMEVAL_HUMOR_TRIAL_DIR = os.path.join(DATA_DIR, 'trial_dir/trial_data/')
+SEMEVAL_HUMOR_EVAL_DIR = os.path.join(DATA_DIR, 'evaluation_dir/evaluation_data/')
 
 # Character-to-phoneme model paths
 CMU_SYMBOLS_FILE_PATH = os.path.join(DATA_DIR, 'cmudict-0.7b.symbols.txt')

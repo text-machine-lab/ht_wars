@@ -34,9 +34,9 @@ def save_numpy_array(np_array, filename):
     np.save(filename, np_array)
 
 
-def save_pickle_file(object, filename):
+def save_pickle_file(a, filename):
     print 'Saving object as %s' % filename
-    pickle.dump(object, open(filename, 'wb'))
+    pickle.dump(a, open(filename, 'wb'))
 
 
 def print_help_info():
@@ -64,12 +64,11 @@ def extract_CMU_dataset(max_word_size=20):
 
 
 def build_character_vocabulary_from_cmu():
-    '''Runs through all lines and builds a vocabulary over
+    """Runs through all lines and builds a vocabulary over
     all characters present in the dataset. Maps each character
-    to a unique index. All lines that start with a ; are ignored; they are comments.'''
+    to a unique index. All lines that start with a ; are ignored; they are comments."""
     print 'Building character vocabulary'
-    characters = []
-    characters.append('')
+    characters = ['']
     with open(CMU_DICTIONARY_FILE_PATH) as f:
         for line in f:
             if line[0] != ';':  # All lines with ; are comments, ignore them
@@ -85,7 +84,7 @@ def build_character_vocabulary_from_cmu():
 
 
 def get_number_of_word_pronunciation_pairs():
-    '''Counts the number of word pronunciation pairs.'''
+    """Counts the number of word pronunciation pairs."""
     num_pairs = 0
     with open(CMU_DICTIONARY_FILE_PATH) as f:
         for line in f:
@@ -96,11 +95,10 @@ def get_number_of_word_pronunciation_pairs():
 
 
 def build_phoneme_vocabulary_from_cmu():
-    '''Runs through all lines in the symbols list
-    and associates each phoneme with an index.'''
+    """Runs through all lines in the symbols list
+    and associates each phoneme with an index."""
     print 'Building phoneme vocabulary'
-    phonemes = []
-    phonemes.append('')
+    phonemes = ['']
     with open(CMU_SYMBOLS_FILE_PATH) as f:
         for line in f:
             phonemes.append(line[:-1])
@@ -111,9 +109,9 @@ def build_phoneme_vocabulary_from_cmu():
 
 
 def extract_CMU_words_and_pronunciations_in_index_format(char_to_index, phone_to_index, num_pairs):
-    '''Returns a numpy array of words and a numpy array of pronunciations. Each word
+    """Returns a numpy array of words and a numpy array of pronunciations. Each word
     is a numpy row of indices, each index mapped to a character using char_to_index. Each pronunciation is
-    a numpy row of indices, each index mapped to a phoneme using phone_to_index.'''
+    a numpy row of indices, each index mapped to a phoneme using phone_to_index."""
     print 'Extracting words and their pronunciations as separate numpy arrays'
     np_words = np.zeros([num_pairs, MAX_WORD_SIZE], dtype=int64)
     np_pronunciations = np.zeros([num_pairs, MAX_PRONUNCIATION_SIZE], dtype=int64)
@@ -139,11 +137,11 @@ def extract_CMU_words_and_pronunciations_in_index_format(char_to_index, phone_to
 
 
 def extract_word_and_pronunciation_from_line(line):
-    '''Extracts a word and a pronunciation from each line. Each word is a string
-    and each pronunciation is a list of phonemes. All instances of (*) are removed 
+    """Extracts a word and a pronunciation from each line. Each word is a string
+    and each pronunciation is a list of phonemes. All instances of (*) are removed
     to include multiple spellings for the same word. In the dataset, all symbols
     include a spelling afterwards. These spellings are ignored. Returns the word
-    and the pronunciation. Example "hello", ["H","AE1","L","OH"] '''
+    and the pronunciation. Example "hello", ["H","AE1","L","OH"] """
     first_char = line[0]
     line_split = line[:-1].split(' ')
     word = line_split[0].lower()
@@ -157,8 +155,8 @@ def extract_word_and_pronunciation_from_line(line):
 
 
 def print_word_pronunciation_pairs_from_file():
-    '''This program opens the file, runs through each valid
-    line and prints word-pronunciation pairs.'''
+    """This program opens the file, runs through each valid
+    line and prints word-pronunciation pairs."""
     print 'Printing saved word-pronunciation pairs'
     np_words = np.load(CMU_NP_WORDS_FILE_PATH)
     np_pronunciations = np.load(CMU_NP_PRONUNCIATIONS_FILE_PATH)

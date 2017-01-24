@@ -6,6 +6,7 @@ For each hashtag, it will generate and save a numpy array for each tweet. The nu
 be shaped m x n x e where m is the number of tweet pairs in the hashtag, n is the max tweet size and
 e is the concatenated size of both the phonetic and glove embeddings."""
 from tools import get_hashtag_file_names
+from tools import convert_hashtag_to_embedding_tweet_pairs
 from config import SEMEVAL_HUMOR_TRAIN_DIR, HUMOR_MAX_WORDS_IN_TWEET, HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_EMB_SIZE, \
     PHONETIC_EMB_SIZE
 from config import SEMEVAL_HUMOR_TRIAL_DIR
@@ -13,8 +14,7 @@ from config import WORD_VECTORS_FILE_PATH
 from config import HUMOR_INDEX_TO_WORD_FILE_PATH
 from config import HUMOR_WORD_TO_GLOVE_FILE_PATH
 from config import HUMOR_WORD_TO_PHONETIC_FILE_PATH
-from config import TWEET_PAIR_LABEL_RANDOM_SEED
-from tools import extract_tweet_pairs
+from tools import extract_tweet_pairs_by_rank
 from config import HUMOR_MAX_WORDS_IN_TWEET
 from config import HUMOR_MAX_WORDS_IN_HASHTAG
 from config import GLOVE_EMB_SIZE
@@ -98,7 +98,9 @@ def create_vocabulary_and_glove_phonetic_mappings():
 
 def create_dictionary_mapping(first_list, second_list):
     """Both lists must be the same length. First list is key.
-    Second list is value in returned dictionary."""
+    Second list is value in returned dictionary.
+    first_list - list to be interpretted as keys
+    second_list - list to be interpretted as values"""
     assert len(first_list) == len(second_list)
     mapping_dict = {}
     for i in range(len(first_list)):
@@ -106,37 +108,28 @@ def create_dictionary_mapping(first_list, second_list):
     return mapping_dict
 
 
-def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, tweet_input_dir, tweet_pair_output_dir):
+def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, tweet_input_dir, tweet_pair_output_dir, hashtag_names=None):
     """Create output directory if it doesn't exist. For all hashtags, generate tweet pairs from all tweets by comparing
     winner with top-ten, top-ten with loser, and winner with loser tweets. Convert each word in each tweet of a tweet pair into
     both a GloVe embedding and phonetic embedding. For each hashtag, produce a numpy array for the first tweet in each pair, produce
     a numpy array for the second tweet in each pair, and produce a label array to tell which one is funnier (1 indicates first tweet is funnier).
-    For each row of each tweet vector, insert the GloVe and phonetic embeddings for each word, and insert padding up up to the max words in tweet."""
+    For each row of each tweet vector, insert the GloVe and phonetic embeddings for each word, and insert padding up up to the max words in tweet.
+    Can specify hashtag names to convert to embedding tweet pairs instead of all hashtags in tweet_input_dir.
+
+    word_to_glove - a dictionary mapping from words to glove vectors
+    word_to_phonetic - a dictionary mapping from words to phonetic embedding vectors
+    tweet_input_dir - directory of hashtags to convert into embedding tweet pairs
+    tweet_pair_output_dir - output directory, where to store hashtag tweet pair numpy arrays
+    hashtag_names - default None; can be used to set specific hashtags to convert"""
     if not os.path.exists(tweet_pair_output_dir):
         os.makedirs(tweet_pair_output_dir)
-    hashtag_names = get_hashtag_file_names(tweet_input_dir)
+    if hashtag_names is None:
+        hashtag_names = get_hashtag_file_names(tweet_input_dir)
 
     for hashtag_name in hashtag_names:
         print 'Loading hashtag: %s' % hashtag_name
-        formatted_hashtag_name = ' '.join(hashtag_name.split('_')).lower()
-        tweets, labels, tweet_ids = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv', explicit_hashtag=formatted_hashtag_name)  # formatted_hashtag_name)
-
-        print 'Generating tweet pairs'
-        random.seed(TWEET_PAIR_LABEL_RANDOM_SEED + hashtag_name)
-        tweet_pairs = extract_tweet_pairs(tweets, labels, tweet_ids)
-        tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
-
-        tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
-        tweet2 = [tweet_pair[2] for tweet_pair in tweet_pairs]
-        tweet2_id = [tweet_pair[3] for tweet_pair in tweet_pairs]
-        labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
-        print 'For each tweet in pair, converting to GloVe/phonetic vector format'
-        np_label = np.array(labels)
-        np_hashtag_gloves_col = convert_tweet_to_embeddings([formatted_hashtag_name], word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
-        np_hashtag_gloves = np.repeat(np_hashtag_gloves_col, len(tweet1), axis=0)
-
-        np_tweet1_gloves = convert_tweet_to_embeddings(tweet1, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET, GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
-        np_tweet2_gloves = convert_tweet_to_embeddings(tweet2, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET, GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
+        np_tweet1_gloves, np_tweet2_gloves, tweet1_id, tweet2_id, np_label, np_hashtag_gloves = \
+            convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name, word_to_glove, word_to_phonetic)
         # Save
         print 'Saving embedding vector tweet pairs with labels'
         np.save(open(tweet_pair_output_dir + hashtag_name + '_label.npy', 'wb'), np_label)
@@ -147,27 +140,6 @@ def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, twe
         np.save(open(tweet_pair_output_dir + hashtag_name + '_second_tweet_glove.npy', 'wb'),
                 np_tweet2_gloves)
         pickle.dump(tweet2_id, open(tweet_pair_output_dir + hashtag_name + '_second_tweet_ids.cpkl', 'wb'))
-
-
-def convert_tweet_to_embeddings(tweets, word_to_glove, word_to_phonetic, max_number_of_words, glove_size, phonetic_emb_size):
-    """Pack GloVe vectors and phonetic embeddings side by side for each word in each tweet, leaving
-    enough padding to fit the max_number_of_words."""
-    word_embedding_size = glove_size + phonetic_emb_size
-    np_tweet_embs = np.zeros([len(tweets), max_number_of_words * word_embedding_size])
-    for i in range(len(tweets)):
-        tokens = tweets[i].split()
-        for j in range(len(tokens)):
-            if j < max_number_of_words:
-                if tokens[j] in word_to_glove:
-                    np_token_glove = np.array(word_to_glove[tokens[j]])
-                    for k in range(glove_size):
-                        np_tweet_embs[i, j*word_embedding_size + k] = np_token_glove[k]
-                if tokens[j] in word_to_phonetic:
-                    np_token_phonetic = np.array(word_to_phonetic[tokens[j]])
-                    for k in range(phonetic_emb_size):
-                        np_tweet_embs[i, j*word_embedding_size + glove_size + k] = np_token_phonetic[k]
-
-    return np_tweet_embs
 
 
 def look_up_glove_embeddings(index_to_word):
@@ -187,6 +159,7 @@ def look_up_glove_embeddings(index_to_word):
 
 
 def format_hashtag(hashtag_name):
+    """Remove # and _ symbols and convert to lowercase."""
     name_without_hashtag = hashtag_name.replace('#', '')
     hashtag_with_spaces = name_without_hashtag.replace('_', ' ')
     return hashtag_with_spaces.lower()
