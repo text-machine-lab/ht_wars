@@ -10,7 +10,218 @@ from os import walk
 import nltk
 import numpy as np
 
-from config import TWEET_SIZE
+from config import TWEET_SIZE, TWEET_PAIR_LABEL_RANDOM_SEED
+from config import HUMOR_MAX_WORDS_IN_HASHTAG, HUMOR_MAX_WORDS_IN_TWEET
+from config import GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE
+from config import SEMEVAL_HUMOR_TRAIN_DIR, HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
+
+
+def output_tweet_statistics(hashtags, directory=SEMEVAL_HUMOR_TRAIN_DIR):
+    """This function analyzes the dataset and prints statistics for it.
+    These statistics have to do with the number of tweets, the largest and average
+    length of tweets - for all tweets, top-ten tweets, and winning tweets."""
+    largest_tweet_length = 0
+    largest_winning_tweet_length = 0
+    number_of_tweets = 0
+    number_of_top_ten_tweets = 0
+    number_of_winning_tweets = 0
+    tweet_length_sum = 0
+    winning_tweet_length_sum = 0
+
+    # Find tweet length statistics (max, average, std dev) and number of tweets.
+    for hashtag in hashtags:
+        with open(directory + hashtag + '.tsv') as tsv:
+            for line in csv.reader(tsv, dialect='excel-tab'):
+                # Count number of tweets, find longest tweet, find average tweet length
+                # for all tweets, top ten, and winning.
+                tweet_length = len(line[1])
+                tweet_rank = int(line[2])
+                number_of_tweets += 1
+                tweet_length_sum += tweet_length
+                if tweet_length > largest_tweet_length:
+                    largest_tweet_length = tweet_length
+                if tweet_rank == 2:
+                    if tweet_length > largest_winning_tweet_length:
+                        largest_winning_tweet_length = tweet_length
+                    winning_tweet_length_sum += tweet_length
+                    number_of_winning_tweets += 1
+                if tweet_rank == 1:
+                    number_of_top_ten_tweets += 1
+    average_tweet_length = (float(tweet_length_sum) / number_of_tweets)
+    average_winning_tweet_length = (float(winning_tweet_length_sum) / number_of_winning_tweets)
+
+    # Find standard deviation.
+    tweet_std_dev_sum = 0
+    winning_tweet_std_dev_sum = 0
+    for hashtag in hashtags:
+        with open(directory + hashtag + '.tsv') as tsv:
+            for line in csv.reader(tsv, dialect='excel-tab'):
+                tweet_length = len(line[1])
+                tweet_rank = int(line[2])
+                tweet_std_dev_sum += abs(tweet_length - average_tweet_length)
+                if tweet_rank == 2:
+                    winning_tweet_std_dev_sum += abs(tweet_length - average_winning_tweet_length)
+    tweet_std_dev = float(tweet_std_dev_sum) / number_of_tweets
+    winning_tweet_std_dev = float(winning_tweet_std_dev_sum) / number_of_winning_tweets
+
+    # Print statistics found above.
+    print 'The largest tweet length is %s characters' % largest_tweet_length
+    print 'The largest winning tweet length is %s characters' % largest_winning_tweet_length
+    print 'Number of tweets: %s' % number_of_tweets
+    print 'Number of top-ten tweets: %s' % number_of_top_ten_tweets
+    print 'Number of winning tweets: %s' % number_of_winning_tweets
+    print 'Average tweet length: %s' % average_tweet_length
+    print 'Average winning tweet length: %s' % average_winning_tweet_length
+    print 'Tweet length standard deviation: %s' % tweet_std_dev
+    print 'Winning tweet length standard deviation: %s' % winning_tweet_std_dev
+
+
+def build_character_vocabulary(hashtags, directory=SEMEVAL_HUMOR_TRAIN_DIR):
+    """Find all characters special or alphabetical that appear in the dataset.
+    Construct a vocabulary that assigns a unique index to each character and
+    return that vocabulary. Vocabulary does not include anything with a backslash."""
+    characters = ['']
+    #Create list of all characters that appear in dataset.
+    for hashtag in hashtags:
+        with open(directory + hashtag + '.tsv') as tsv:
+            for line in csv.reader(tsv, dialect='excel-tab'):
+                for char in line[1]:
+                    # If character hasn't been seen before, add it to the vocabulary.
+                    if char not in characters:
+                        characters.append(char)
+    # Create dictionary from list to map from characters to their indices.
+    vocabulary = {}
+    for i in range(len(characters)):
+        vocabulary[characters[i]] = i
+    return vocabulary
+
+
+def save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag, directory=HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR):
+    print 'Saving data for hashtag %s' % hashtag
+    # Create directories if they don't exist
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    # Save hashtag tweet pair data into training or testing folders depending on training_hashtag
+    np.save(directory + hashtag + '_pairs.npy', np_tweet_pairs)
+    np.save(directory + hashtag + '_labels.npy', np_tweet_pair_labels)
+
+
+def process_hashtag_data(hashtag_dir, char_to_index_path, tweet_pair_path):
+    hashtags = get_hashtag_file_names(hashtag_dir)
+    char_to_index = build_character_vocabulary(hashtags, directory=hashtag_dir)
+    print('Size of character vocabulary: %s' % len(char_to_index))
+    output_tweet_statistics(hashtags, directory=hashtag_dir)
+    print 'Extracting tweet pairs...'
+    for i in range(len(hashtags)):
+        hashtag = hashtags[i]
+        random.seed(TWEET_PAIR_LABEL_RANDOM_SEED + hashtag)
+        data = extract_tweet_pairs_from_file(hashtag_dir + hashtag + '.tsv')
+        np_tweet_pairs, np_tweet_pair_labels = format_tweet_pairs(data, char_to_index)
+        save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag, directory=tweet_pair_path)
+    print 'Saving char_to_index.cpkl containing character vocabulary'
+    if char_to_index_path is not None:
+        pickle.dump(char_to_index, open(char_to_index_path, 'wb'))
+    print "Done!"
+
+
+def format_tweet_pairs(data, char_to_index, max_tweet_size=140):
+    """This script converts every character in all tweets into an index.
+    It stores each tweet side by side, each tweet constrained to 150 characters long.
+    The total matrix is m x 300, for m tweet pairs, two 150 word tweets per row."""
+    labels_exist = (len(data[0]) > 4)
+    # Create numpy matrices to hold tweet pairs and their labels.
+    np_tweet_pairs = np.zeros(shape=[len(data), max_tweet_size * 2], dtype=int)
+    if labels_exist:
+        np_tweet_pair_labels = np.zeros(shape=[len(data)], dtype=int)
+    else:
+        np_tweet_pair_labels = None
+    for pair_index in range(len(data)):
+        first_tweet = data[pair_index][0]
+        second_tweet = data[pair_index][2]
+        # Insert label for tweet pair into numpy array.
+        if labels_exist:
+            np_tweet_pair_labels[pair_index] = data[pair_index][4]
+        # Insert first tweet of pair into numpy array.
+        for i in range(len(first_tweet)):
+            if i < max_tweet_size:
+                character = first_tweet[i]
+                if character in char_to_index:
+                    np_tweet_pairs[pair_index][i] = char_to_index[character]
+        # Insert second tweet of pair into numpy array.
+        for i in range(len(second_tweet)):
+            if i < max_tweet_size:
+                character = second_tweet[i]
+                if character in char_to_index:
+                    np_tweet_pairs[pair_index][i + max_tweet_size] = char_to_index[character]
+
+    return np_tweet_pairs, np_tweet_pair_labels
+
+
+def convert_tweet_to_embeddings(tweets, word_to_glove, word_to_phonetic, max_number_of_words, glove_size, phonetic_emb_size):
+    """Pack GloVe vectors and phonetic embeddings side by side for each word in each tweet as a numpy array.
+
+    tweets - list of tweet strings
+    word_to_glove - dictionary mapping from words to their glove vectors
+    word_to_phonetic - dictionary mapping from words to their phonetic embeddings
+    max_number_of_words - leave padding to fit all tweets in same space
+    glove_size - size of glove vectors used
+    phonetic_emb_size - size of phonetic embeddings used"""
+    word_embedding_size = glove_size + phonetic_emb_size
+    np_tweet_embs = np.zeros([len(tweets), max_number_of_words * word_embedding_size])
+    for i in range(len(tweets)):
+        tokens = tweets[i].split()
+        for j in range(len(tokens)):
+            if j < max_number_of_words:
+                if tokens[j] in word_to_glove:
+                    np_token_glove = np.array(word_to_glove[tokens[j]])
+                    for k in range(glove_size):
+                        np_tweet_embs[i, j*word_embedding_size + k] = np_token_glove[k]
+                if tokens[j] in word_to_phonetic:
+                    np_token_phonetic = np.array(word_to_phonetic[tokens[j]])
+                    for k in range(phonetic_emb_size):
+                        np_tweet_embs[i, j*word_embedding_size + glove_size + k] = np_token_phonetic[k]
+
+    return np_tweet_embs
+
+
+def convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name, word_to_glove, word_to_phonetic):
+    """Load a tweets from a hashtag by its directory and name. Convert tweets to tweet pairs and return.
+
+    tweet_input_dir - location of tweet .tsv file
+    hashtag_name - name of hashtag file without .tsv extension
+    word_to_glove - dictionary mapping from words to glove vectors
+    word_to_phonetic - dictionary mapping from words to phonetic embeddings
+    Returns:
+    np_tweet1_gloves - numpy array of glove/phonetic vectors for all first tweets
+    np_tweet2_gloves - numpy array of glove/phonetic vectors for all second tweets
+    tweet1_id - tweet id of all first tweets in np_tweet1_gloves
+    tweet2_id - tweet id of all second tweets in np_tweet2_gloves
+    np_label - numpy array of funnier tweet labels; None if hashtag does not contain labels
+    np_hashtag_gloves - numpy array of glove/phonetic vectors for hashtag name"""
+    formatted_hashtag_name = ' '.join(hashtag_name.split('_')).lower()
+    tweets, labels, tweet_ids = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv',
+                                                         explicit_hashtag=formatted_hashtag_name)  # formatted_hashtag_name)
+    random.seed(TWEET_PAIR_LABEL_RANDOM_SEED + hashtag_name)
+    if len(labels) > 0:
+        tweet_pairs = extract_tweet_pairs_by_rank(tweets, labels, tweet_ids)
+    else:
+        tweet_pairs = extract_tweet_pairs_by_combination(tweets, tweet_ids)
+    tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
+    tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
+    tweet2 = [tweet_pair[2] for tweet_pair in tweet_pairs]
+    tweet2_id = [tweet_pair[3] for tweet_pair in tweet_pairs]
+    np_label = None
+    if len(labels) > 0:
+        labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
+        np_label = np.array(labels)
+    np_hashtag_gloves_col = convert_tweet_to_embeddings([formatted_hashtag_name], word_to_glove, word_to_phonetic,
+                                                        HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
+    np_hashtag_gloves = np.repeat(np_hashtag_gloves_col, len(tweet1), axis=0)
+    np_tweet1_gloves = convert_tweet_to_embeddings(tweet1, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET,
+                                                   GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
+    np_tweet2_gloves = convert_tweet_to_embeddings(tweet2, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET,
+                                                   GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
+    return np_tweet1_gloves, np_tweet2_gloves, tweet1_id, tweet2_id, np_label, np_hashtag_gloves
 
 
 def extract_tweet_pair_from_hashtag_datas(hashtag_datas, hashtag_name, tweet_size=TWEET_SIZE):
@@ -25,11 +236,11 @@ def extract_tweet_pair_from_hashtag_datas(hashtag_datas, hashtag_name, tweet_siz
 
 
 def extract_tweet_pairs_from_file(hashtag_file):
-    '''This script extracts tweet pairs from the file hashtag_file.
+    """This script extracts tweet pairs from the file hashtag_file.
     It stores them in an array of tweet pairs, each tweet pair
     being a list of the form [tweet_1_text, tweet_2_text, first_tweet_funnier].
     first_tweet_funnier is 1 if the first tweet is funnier and 0 if the second
-    tweet is funnier.'''
+    tweet is funnier."""
     tweets = []
     tweet_ranks = []
     tweet_ids = []
@@ -39,11 +250,22 @@ def extract_tweet_pairs_from_file(hashtag_file):
         for line in csv.reader(tsv, dialect='excel-tab'):
             tweet_ids.append(int(line[0]))
             tweets.append(line[1])
-            tweet_ranks.append(int(line[2]))
-    return extract_tweet_pairs(tweets, tweet_ranks, tweet_ids)
+            if len(line) > 2:
+                tweet_ranks.append(int(line[2]))
+    # If there are labels, create pairs from rank
+    # If there are no labels, create pairs from all combinations of tweets
+    if len(tweet_ranks) == 0:
+        return extract_tweet_pairs_by_combination(tweets, tweet_ids)
+    elif len(tweet_ranks) < len(tweets):
+        print 'Warning: Problem reading %s' % hashtag_file
+    else:
+        return extract_tweet_pairs_by_rank(tweets, tweet_ranks, tweet_ids)
 
 
 def remove_hashtag_from_tweets(tweets):
+    """Takes a list of tweets. For each tweet, if it contains
+    a hashtag, that hashtag is removed. Returns the tweets
+    without hashtags. Copies input tweets."""
     tweets_without_hashtags = []
     for tweet in tweets:
         tweet_without_hashtags = ''
@@ -59,7 +281,7 @@ def remove_hashtag_from_tweets(tweets):
     return tweets_without_hashtags
 
 
-def extract_tweet_pairs(tweets, tweet_ranks, tweet_ids):
+def extract_tweet_pairs_by_rank(tweets, tweet_ranks, tweet_ids):
     """Creates pairs of the form [first_tweet, first_tweet_id, second_tweet, second_tweet_id, first_tweet_is_funnier]"""
     winner, winner_ids, top_ten, top_ten_ids, non_winners, non_winner_ids = \
         divide_tweets_by_rank(tweets, tweet_ids, tweet_ranks)
@@ -84,6 +306,20 @@ def extract_tweet_pairs(tweets, tweet_ranks, tweet_ids):
                 pairs.append([winning_tweet, winning_id, top_ten_tweet, top_ten_id, 1])
             else:
                 pairs.append([top_ten_tweet, top_ten_id, winning_tweet, winning_id, 0])
+    return pairs
+
+
+def extract_tweet_pairs_by_combination(tweets, tweet_ids):
+    """Creates tweet pairs out of every combination of tweets. Each
+    pair takes on the form [tweet1, tweet1_id, tweet2, tweet2_id].
+
+    tweets - tweets to create pairs from
+    tweet_ids - each id is that of tweet with same index in tweets"""
+    pairs = []
+    for first_index in range(len(tweets)):
+        for second_index in range(first_index + 1, len(tweets)):
+            pairs.append([tweets[first_index], tweet_ids[first_index],
+                         tweets[second_index], tweet_ids[second_index]])
     return pairs
 
 
@@ -118,7 +354,7 @@ def divide_tweets_by_rank(tweets, tweet_ids, tweet_ranks):
     return winner, winner_ids, top_ten, top_ten_ids, non_winners, non_winner_ids
 
 
-def format_text_with_hashtag(text, hashtag_replace=None):
+def format_text_for_embedding_model(text, hashtag_replace=None):
     """Split up existing hashtags. If hashtag_replace=None, then hashtags
     existing in tweet will be broken up and placed at the beginning. If
     hashtag_replace='', no hashtag will be added to the beginning. If
@@ -168,16 +404,22 @@ def load_tweets_from_hashtag(filename, explicit_hashtag=None):
     # Open hashtag file line for line. File is tsv.
     # Tweet is second variable, tweet win/top10/lose status is third variable
     # Replace any Twitter hashtag with a '$'
+    line_does_not_contain_label = False
     with open(filename, 'rb') as f:
         tsvread = csv.reader(f, delimiter='\t')
         for line in tsvread:
-            id = line[0]
+            tweet_id = line[0]
             tweet = line[1]
-            formatted_tweet = format_text_with_hashtag(tweet, hashtag_replace=explicit_hashtag)
+            formatted_tweet = format_text_for_embedding_model(tweet, hashtag_replace=explicit_hashtag)
             tweet_tokens = nltk.word_tokenize(formatted_tweet)
-            tweet_ids.append(int(id))
+            tweet_ids.append(int(tweet_id))
             tweets.append(' '.join(tweet_tokens).lower())
-            labels.append(int(line[2]))
+            if len(line) > 2:
+                if line_does_not_contain_label:
+                    print 'Warning: Hashtag labels not formatted correctly.'
+                labels.append(int(line[2]))
+            else:
+                line_does_not_contain_label = True
 
     return tweets, labels, tweet_ids
 

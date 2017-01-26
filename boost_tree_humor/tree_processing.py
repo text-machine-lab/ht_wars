@@ -4,7 +4,7 @@ import random
 import os
 from tools import get_hashtag_file_names
 from tools import load_tweets_from_hashtag
-from tools import extract_tweet_pairs
+from tools import extract_tweet_pairs_by_rank
 from tools import remove_hashtag_from_tweets
 from config import SEMEVAL_HUMOR_TRAIN_DIR
 from config import TWEET_PAIR_LABEL_RANDOM_SEED
@@ -13,6 +13,18 @@ from config import BOOST_TREE_TWEET_PAIR_TESTING_DIR
 from twitter_hawk import TwitterHawk
 from twitter_hawk import TWITTERHAWK_ADDRESS
 from config import SEMEVAL_HUMOR_TRIAL_DIR
+
+# XGBoost Feature Bucket:
+# Length of tweet in tokens
+# Sentiment tweet
+# Sentiment of hashtag
+# Distance of average GloVe of tweet with hashtag
+# Average distance between token GloVe in tweet to all other tweets
+# Number of tokens in hashtag
+# Number of verbs, other POS
+# Number of out-of-vocabulary words for GloVe embedding
+# Number of capital letters
+# Is hashtag in the beginning or the end
 
 
 def main():
@@ -35,7 +47,7 @@ def generate_tree_model_input_data_from_dir(directory, output_dir):
         tweets = remove_hashtag_from_tweets(tweets)
         print 'Creating tweet pairs'
         random.seed(TWEET_PAIR_LABEL_RANDOM_SEED)
-        tweet_pairs = extract_tweet_pairs(tweets, tweet_labels, tweet_ids)
+        tweet_pairs = extract_tweet_pairs_by_rank(tweets, tweet_labels, tweet_ids)
         tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
         tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
         tweet2 = [tweet_pair[2] for tweet_pair in tweet_pairs]

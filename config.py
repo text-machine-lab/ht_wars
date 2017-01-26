@@ -16,6 +16,7 @@ WORD_VECTORS_FILE_PATH = os.path.join(DATA_DIR, 'glove.twitter.27B/glove.twitter
 # Main #HashtagWars dataset paths
 SEMEVAL_HUMOR_TRAIN_DIR = os.path.join(DATA_DIR, 'train_dir/train_data/')
 SEMEVAL_HUMOR_TRIAL_DIR = os.path.join(DATA_DIR, 'trial_dir/trial_data/')
+SEMEVAL_HUMOR_EVAL_DIR = os.path.join(DATA_DIR, 'evaluation_dir/evaluation_data/')
 
 # Character-to-phoneme model paths
 CMU_SYMBOLS_FILE_PATH = os.path.join(DATA_DIR, 'cmudict-0.7b.symbols.txt')
@@ -28,8 +29,11 @@ CMU_NP_PRONUNCIATIONS_FILE_PATH = os.path.join(DATA_DIR, 'cmu_pronunciations.npy
 
 CHAR_2_PHONE_MODEL_DIR = os.path.join(DATA_DIR, 'char_2_phone_models/')
 
-# Embedding humor model paths
-EMBEDDING_HUMOR_MODEL_DIR = os.path.join(DATA_DIR, 'embedding_humor_models/')
+# Embedding humor model paths for both models, embedding model only, and character model only.
+EMB_CHAR_HUMOR_MODEL_DIR = os.path.join(DATA_DIR, 'humor_models/')
+EMB_HUMOR_MODEL_DIR = os.path.join(DATA_DIR, 'emb-only_humor_models/')
+CHAR_HUMOR_MODEL_DIR = os.path.join(DATA_DIR, 'char-only_humor_models/')
+
 
 HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR = os.path.join(DATA_DIR, 'train_numpy_tweet_pairs/')
 HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR = os.path.join(DATA_DIR, 'trial_numpy_tweet_pairs/')
@@ -44,6 +48,8 @@ HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR = os.path.join(DATA_DIR, 'trial_tweet_pair_
 # Boost tree humor model paths
 BOOST_TREE_TWEET_PAIR_TRAINING_DIR = os.path.join(DATA_DIR, 'training_tweet_pair_tree_data/')
 BOOST_TREE_TWEET_PAIR_TESTING_DIR = os.path.join(DATA_DIR, 'testing_tweet_pair_tree_data/')
+
+# PARAMETERS
 HUMOR_MAX_WORDS_IN_TWEET = 20  # All winning tweets are under 30 words long
 HUMOR_MAX_WORDS_IN_HASHTAG = 8
 GLOVE_EMB_SIZE = 200

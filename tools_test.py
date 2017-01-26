@@ -1,7 +1,7 @@
 """David Donahue 2016. Script to test tools.py and tf_tools.py functionality."""
 from tools import expected_value
 from tools import find_indices_larger_than_threshold
-from tools import format_text_with_hashtag
+from tools import format_text_for_embedding_model
 import numpy as np
 
 
@@ -13,9 +13,9 @@ def main():
 
 def test_format_text_with_hashtag():
     tweet = 'This is an example hashtag #Hashtag'
-    tweet_proc1 = format_text_with_hashtag(tweet)
-    tweet_proc2 = format_text_with_hashtag(tweet, hashtag_replace='tweet')
-    tweet_proc3 = format_text_with_hashtag(tweet, hashtag_replace='')
+    tweet_proc1 = format_text_for_embedding_model(tweet)
+    tweet_proc2 = format_text_for_embedding_model(tweet, hashtag_replace='tweet')
+    tweet_proc3 = format_text_for_embedding_model(tweet, hashtag_replace='')
     assert tweet_proc1 == 'hashtag # this is an example hashtag'
     assert tweet_proc2 == 'tweet # this is an example hashtag'
     assert tweet_proc3 == 'this is an example hashtag'

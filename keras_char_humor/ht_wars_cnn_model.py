@@ -1,6 +1,6 @@
-'''David Donahue 2016. This script is intended to run a model for the Semeval-2017 Task 6. It is
+"""David Donahue 2016. This script is intended to run a model for the Semeval-2017 Task 6. It is
 trained on the #HashtagWars dataset and is designed to predict which of a pair of tweets is funnier.
-It is intended to reconstruct Alexey Romanov's model, which uses a character-by-character processing approach using a CNN.'''
+It is intended to reconstruct Alexey Romanov's model, which uses a character-by-character processing approach using a CNN."""
 
 # Many unused imports.
 import numpy as np
@@ -41,8 +41,8 @@ def main():
 
 
 def train():
-    '''Load all tweet pairs per all hashtags. Per hashtag, train on all other hashtags, test on current hashtag.
-    Print out micro-accuracy each iteration and print out overall accuracy after.'''
+    """Load all tweet pairs per all hashtags. Per hashtag, train on all other hashtags, test on current hashtag.
+    Print out micro-accuracy each iteration and print out overall accuracy after."""
     # Load training tweet pairs/labels, and train on them.
     hashtag_datas, char_to_index, vocab_size = load_hashtag_data_and_vocabulary(HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR, HUMOR_CHAR_TO_INDEX_FILE_PATH)
 #     all_tweet_pairs = np.concatenate([hashtag_datas[i][1] for i in range(len(hashtag_datas))])
@@ -81,7 +81,7 @@ class HashtagWarsCharacterModel:
 #         print 'Initializing #HashtagWars character model'
         
     def create_model(self):
-        '''Load two tweets, analyze them with convolution and predict which is funnier.'''
+        """Load two tweets, analyze them with convolution and predict which is funnier."""
         print 'Building model'
         #Model parameters I can mess with:
         num_filters_1 = 32
@@ -127,7 +127,7 @@ class HashtagWarsCharacterModel:
         return model
         
     def train(self, tweet1, tweet2, labels):
-        '''Construct humor model, then train it on batches of tweet pairs.'''
+        """Construct humor model, then train it on batches of tweet pairs."""
         model = self.create_model()
         # Hold model for predictions later
         self.model = model
@@ -148,9 +148,9 @@ class HashtagWarsCharacterModel:
         print 'Finished training model'
     
     def predict(self, tweet1, tweet2, labels):
-        '''This function uses the pretrained model in this object to predict the funnier of tweet pairs
+        """This function uses the pretrained model in this object to predict the funnier of tweet pairs
         tweet1 and tweet2, and calculates accuracy using the ground truth labels for each pair. The mean
-        accuracy is returned.'''
+        accuracy is returned."""
         m = tweet1.shape[0]
         model = self.model
         batch_size=5000
@@ -175,8 +175,8 @@ class HashtagWarsCharacterModel:
         return mean_accuracy
         
     def predict_batch(self, model, tweet1, tweet2, labels, start_index, end_index):
-        '''Predict which tweet is funnier for all tweet1 and tweet2 from start_index to end_index. Returns accuracy of prediction.
-        Warning: end_index represents the index after the batch has ended. This is the default access format for numpy arrays.'''
+        """Predict which tweet is funnier for all tweet1 and tweet2 from start_index to end_index. Returns accuracy of prediction.
+        Warning: end_index represents the index after the batch has ended. This is the default access format for numpy arrays."""
         # Extract a batch of tweet pairs from total, convert to one-hot, and train.
         tweet1_batch = tweet1[start_index:end_index,:]
         
@@ -197,9 +197,9 @@ class HashtagWarsCharacterModel:
 
 
 def extract_hashtag_data_for_leave_one_out(hashtag_datas, i):
-    '''This function takes an index i representing a particular hashtag.
+    """This function takes an index i representing a particular hashtag.
     The hashtag name is returned, along with tweet pair/label data for both that hashtag and all other
-    hashtags combined. This corresponds with the leave-one-out methodology.'''
+    hashtags combined. This corresponds with the leave-one-out methodology."""
     np_hashtag_tweet_pairs = hashtag_datas[i][1]
     np_hashtag_tweet_labels = hashtag_datas[i][2]
     hashtag_name = hashtag_datas[i][0]
@@ -217,7 +217,7 @@ def extract_hashtag_data_for_leave_one_out(hashtag_datas, i):
     
 
 def convert_tweets_to_one_hot(tweets, vocab_size):
-    '''Converts all tweets (2d vector) into one-hot (3d vector).'''
+    """Converts all tweets (2d vector) into one-hot (3d vector)."""
     # Just converts to one-hot in a cheating way.
     tweets_one_hot = (np.arange(vocab_size) == tweets[:,:,None]-1).astype(int)
     return tweets_one_hot

@@ -1,19 +1,20 @@
-'''David Donahue 18 October 2016. Unit tests for ht_wars_char_model.py'''
+"""David Donahue 18 October 2016. Unit tests for ht_wars_char_model.py"""
 
 import ht_wars_cnn_model
 from ht_wars_cnn_model import HashtagWarsCharacterModel
 from ht_wars_cnn_model import load_hashtag_data_and_vocabulary
 from ht_wars_cnn_model import extract_hashtag_data_for_leave_one_out
 from ht_wars_cnn_model import TWEET_SIZE
-from ht_wars_cnn_model import tweet_pairs_dir
+from config import HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
 import numpy as np
 from os import walk
 
-class TestHTWarsCharModel():
+
+class TestHTWarsCharModel:
     @classmethod
     def setup_class(self):
         print 'Setting up  char model testing'
-        self.hashtag_datas, self.char_to_index, self.vocab_size = load_hashtag_data_and_vocabulary(tweet_pairs_dir)
+        self.hashtag_datas, self.char_to_index, self.vocab_size = load_hashtag_data_and_vocabulary(HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR)
         
     
     def teardown_class(self):
@@ -33,7 +34,7 @@ class TestHTWarsCharModel():
             assert np.max(np_tweet_pairs) < self.vocab_size
             assert np_tweet_pairs.shape[1] == TWEET_SIZE * 2
             hashtag_found_in_filenames = False
-            for (dirpath, dirnames, filenames) in walk(tweet_pairs_dir):
+            for (dirpath, dirnames, filenames) in walk(HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR):
                 for filename in filenames:
                     if hashtag_name in filename:
                         hashtag_found_in_filenames = True

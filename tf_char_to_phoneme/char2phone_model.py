@@ -1,6 +1,6 @@
-'''David Donahue 2016. The data already exists to train this model. This model will be trained in Tensorflow
+"""David Donahue 2016. The data already exists to train this model. This model will be trained in Tensorflow
 on sequences of characters. It will attempt to pronounce these sequences by producing, for each one, a
-sequence of phonemes. The model is trained on the CMU dataset.'''
+sequence of phonemes. The model is trained on the CMU dataset."""
 
 import tensorflow as tf
 import numpy as np
@@ -29,8 +29,8 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 # Model parameters.
 batch_size = 100
 training_fraction = .6
-learning_rate = 0.0003
-n_epochs = 10
+learning_rate = 0.0005
+n_epochs = 15
 
 
 def main():
@@ -138,7 +138,7 @@ def train_model(model_inputs, model_outputs, training_inputs, training_outputs, 
 
 
 def evaluate_model_performance_on_test_set(model_inputs, model_outputs, np_words, np_pronunciations, sess=None):
-    if sess == None:
+    if sess is None:
         # Start a session to run model in gpu.
         sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
         sess.run(tf.initialize_all_variables())
@@ -199,7 +199,7 @@ def calculate_accuracy(np_predictions, np_labels):
     np_matches = (np_predictions == np_labels)
     np_non_zeros = (np_predictions != 0)
     np_non_zero_matches = np_matches * np_non_zeros
-    accuracy = np.sum(np_non_zero_matches, dtype=float) / np.sum(np_non_zeros, dtype=float)
+    accuracy = np.sum(np_non_zero_matches.astype(float)) / np.sum(np_non_zeros.astype(float))
     return accuracy
 
 
