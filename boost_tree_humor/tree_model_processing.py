@@ -55,15 +55,21 @@ def generate_tree_model_input_data_from_dir(directory, output_dir):
         print 'Calculating tweet pair lengths'
         list_of_features.append(calculate_tweet_lengths_per_pair(tweet1, tweet2))
 
-        for feature in list_of_features:
-            print feature.shape
+        print 'Features:'
+        for i, feature in enumerate(list_of_features):
+            print i, feature.shape
 
         np_data = np.concatenate(list_of_features, axis=1)
         np_labels = np.array(labels)
-        np.save(open(output_dir + hashtag_name + '_labels.npy', 'wb'), np_labels)
-        np.save(open(output_dir + hashtag_name + '_data.npy', 'wb'), np_data)
-        print np_labels.shape
-        print np_data.shape
+        print 'Data:', np_data.shape, 'Labels:', np_labels.shape
+
+        labels_filename = output_dir + hashtag_name + '_labels.npy'
+        np.save(open(labels_filename, 'wb'), np_labels)
+        print 'Labels saved', labels_filename
+
+        data_filename = output_dir + hashtag_name + '_data.npy'
+        np.save(open(data_filename, 'wb'), np_data)
+        print 'Data saved', data_filename
 
 
 def calculate_hashtag_sentiment(number_of_examples, hashtag):
@@ -78,8 +84,8 @@ def calculate_tweet_lengths_per_pair(tweet1, tweet2):
     m = len(tweet1)
     np_tweet_lengths = np.zeros([m, 2])
     for index in range(m):
-        np_tweet_lengths[index, 0] = len(tweet1[index])
-        np_tweet_lengths[index, 1] = len(tweet2[index])
+        np_tweet_lengths[index, 0] = len(tweet1[index].split(' '))
+        np_tweet_lengths[index, 1] = len(tweet2[index].split(' '))
     return np_tweet_lengths
 
 

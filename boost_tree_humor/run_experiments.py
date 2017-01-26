@@ -9,7 +9,7 @@ from tree_model import ex
 
 
 def main():
-    nb_samples = 1000
+    nb_samples = 2000
 
     default_params = {
         'silent': 1,

@@ -23,7 +23,6 @@ def config():
     gamma = 3  # min_split_loss
     reg_lambda = 0.007
     num_round = 19
-    objective = 'binary:logistic'
     silent = 0
 
 
