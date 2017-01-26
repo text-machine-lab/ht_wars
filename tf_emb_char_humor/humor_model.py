@@ -209,7 +209,6 @@ def calculate_accuracy_on_batches(batch_predictions, np_labels):
     return accuracy_sum / total_examples
 
 
-@ex.main
 def load_build_train_and_predict(learning_rate, num_epochs, dropout, use_emb_model,
                                  use_char_model, model_save_dir, hidden_dim_size, leave_out_hashtags=[]):
     """Builds and trains a humor model on the semeval task training set. Evaluates on the semeval task trial set,
@@ -234,8 +233,8 @@ def load_build_train_and_predict(learning_rate, num_epochs, dropout, use_emb_mod
     random.seed('hello world')
     hashtag_datas, char_to_index, vocab_size = load_hashtag_data_and_vocabulary(HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR,
                                                                                 HUMOR_CHAR_TO_INDEX_FILE_PATH)
-    trial_hashtag_datas, trial_char_to_index, trial_vocab_size = load_hashtag_data_and_vocabulary(
-        HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR, None)
+    trial_hashtag_datas, _, trial_vocab_size = \
+        load_hashtag_data_and_vocabulary(HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR, None)
 
     g = tf.Graph()
     with g.as_default():
@@ -271,6 +270,13 @@ def load_build_train_and_predict(learning_rate, num_epochs, dropout, use_emb_mod
 
     return {'train_accuracy': training_accuracy,
             'test_accuracy': test_accuracy}
+
+
+@ex.main
+def main(learning_rate, num_epochs, dropout, use_emb_model,
+         use_char_model, model_save_dir, hidden_dim_size, leave_out_hashtags=[]):
+    load_build_train_and_predict(learning_rate, num_epochs, dropout, use_emb_model,
+                                 use_char_model, model_save_dir, hidden_dim_size, leave_out_hashtags=[])
 
 
 if __name__ == '__main__':

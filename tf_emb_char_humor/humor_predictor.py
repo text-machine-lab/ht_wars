@@ -26,7 +26,7 @@ class HumorPredictor:
     model_var_dir - location of model variables corresponding to current model build
     use_emb_model - true if model will use embeddings to make predictions
     use_char_model - true if model will use individual chars to make predictions"""
-    def __init__(self, model_var_dir, use_emb_model=True, use_char_model=True, v=True):
+    def __init__(self, model_var_dir, use_emb_model=True, use_char_model=True, scope=None, v=True, sess=None):
         self.model_var_dir = model_var_dir
         if v: print self.model_var_dir
         self.use_emb_model = use_emb_model
@@ -46,7 +46,7 @@ class HumorPredictor:
          self.tf_batch_size, tf_hashtag, self.tf_output_prob, self.tf_dropout_rate, self.tf_tweet1, self.tf_tweet2] \
             = build_humor_model(len(self.char_to_index), use_embedding_model=self.use_emb_model,
                                 use_character_model=self.use_char_model, hidden_dim_size=None)
-        self.sess = restore_model_from_save(model_var_dir)
+        self.sess = restore_model_from_save(model_var_dir, sess=sess)
 
     def __call__(self, tweet_input_dir, hashtag_name):
         """Makes prediction on a single hashtag.
@@ -72,9 +72,11 @@ class HumorPredictor:
         return np_predictions, np_output_prob, np_labels
 
 
-def restore_model_from_save(model_var_dir):
+def restore_model_from_save(model_var_dir, sess=None):
     """Restores all model variables from the specified directory."""
-    sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
+    if sess is None:
+        sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
+
     saver = tf.train.Saver(max_to_keep=10)
     # Restore model from previous save.
     ckpt = tf.train.get_checkpoint_state(model_var_dir)
@@ -83,12 +85,13 @@ def restore_model_from_save(model_var_dir):
     else:
         print("No checkpoint found!")
         return -1
+
     return sess
 
 
 def main():
     """Test for HumorMultiPredictor."""
-    hp = HumorPredictor(EMB_CHAR_HUMOR_MODEL_DIR)  # character model only
+    hp = HumorPredictor(EMB_CHAR_HUMOR_MODEL_DIR)
     hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRIAL_DIR)
     eval_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_EVAL_DIR)
     accuracies = []
