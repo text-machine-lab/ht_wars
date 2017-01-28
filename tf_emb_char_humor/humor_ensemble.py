@@ -29,13 +29,13 @@ def main():
     num_groups = 5
 
     for hashtag_group_index in range(num_groups):
+
         # Train on all hashtags not in group
         hashtags_in_group, trainable_vars = train_on_hashtags_in_group(training_hashtag_names, hashtag_group_index, num_groups)
-        tf.reset_default_graph()
+        K.clear_session()
 
         # Predict on hashtags in group
         hp = humor_predictor.HumorPredictor(EMB_CHAR_HUMOR_MODEL_DIR)
-        K.set_session(tf.get_default_session())
         accuracies = []
         for hashtag_name in hashtags_in_group:
             print hashtag_name
@@ -46,6 +46,7 @@ def main():
             print 'Hashtag accuracy: %s' % accuracy
             accuracies.append(accuracy)
         print 'Trial accuracy: %s' % np.mean(accuracies)
+        K.clear_session()
 
 
 def train_on_hashtags_in_group(training_hashtag_names, hashtag_group_index, num_groups):
