@@ -22,7 +22,7 @@ def config():
     eta = 0.003  # learning_rate
     gamma = 3  # min_split_loss
     reg_lambda = 0.007
-    num_round = 19
+    num_round = 5
     silent = 0
 
 
