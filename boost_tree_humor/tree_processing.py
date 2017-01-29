@@ -94,8 +94,8 @@ def generate_tree_model_input_data_from_dir(directory, output_dir):
         list_of_features.append(
             calculate_tweet_pair_hashtag_distance(tweets, tweet1, tweet2, formatted_hashtag, word_to_glove))
 
-        # print 'Calculating POS features'
-        # list_of_features.append(calculate_tweet_pair_pos(tweets, tweet1, tweet2))
+        print 'Calculating POS features'
+        list_of_features.append(calculate_tweet_pair_pos(tweets, tweet1, tweet2))
 
         print 'Features:'
         for i, feature in enumerate(list_of_features):
