@@ -27,20 +27,29 @@ class HumorPredictor:
     use_emb_model - true if model will use embeddings to make predictions
     use_char_model - true if model will use individual chars to make predictions"""
     def __init__(self, model_var_dir, use_emb_model=True, use_char_model=True, scope=None, v=True, sess=None):
+        print use_emb_model
+        print use_char_model
         self.model_var_dir = model_var_dir
-        if v: print self.model_var_dir
+        if v:
+            print self.model_var_dir
         self.use_emb_model = use_emb_model
-        if v: print self.use_emb_model
+        if v:
+            print 'self.use_emb_model: %s' % self.use_emb_model
         self.use_char_model = use_char_model
-        if v: print self.use_char_model
+        if v:
+            print 'self.use_char_model: %s' % self.use_char_model
         self.vocabulary = pickle.load(open(HUMOR_INDEX_TO_WORD_FILE_PATH, 'rb'))
-        if v: print 'len vocabulary: %s' % len(self.vocabulary)
+        if v:
+            print 'len vocabulary: %s' % len(self.vocabulary)
         self.word_to_glove = pickle.load(open(HUMOR_WORD_TO_GLOVE_FILE_PATH, 'rb'))
-        if v: print 'len word_to_glove: %s' % len(self.word_to_glove)
+        if v:
+            print 'len word_to_glove: %s' % len(self.word_to_glove)
         self.word_to_phonetic = pickle.load(open(HUMOR_WORD_TO_PHONETIC_FILE_PATH, 'rb'))
-        if v: print 'len word_to_phonetic: %s' % len(self.word_to_phonetic)
+        if v:
+            print 'len word_to_phonetic: %s' % len(self.word_to_phonetic)
         self.char_to_index = pickle.load(open(HUMOR_CHAR_TO_INDEX_FILE_PATH, 'rb'))
-        if v: print 'len char_to_index: %s' % len(self.char_to_index)
+        if v:
+            print 'len char_to_index: %s' % len(self.char_to_index)
 
         [self.tf_first_input_tweets, self.tf_second_input_tweets, self.tf_output, tf_tweet_humor_rating,
          self.tf_batch_size, tf_hashtag, self.tf_output_prob, self.tf_dropout_rate, self.tf_tweet1, self.tf_tweet2] \

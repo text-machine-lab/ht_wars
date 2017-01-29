@@ -51,10 +51,10 @@ N_TRAIN_EPOCHS = 1
 
 @ex.config
 def my_config():
-    learning_rate = np.random.uniform(.00005, .0000005)
-    num_epochs = int(np.random.uniform(1.0, 4.0))
-    dropout = np.random.uniform(.5, 1.0)
-    hidden_dim_size = int(np.random.uniform(200, 3200))
+    learning_rate = .00005  # np.random.uniform(.00005, .0000005)
+    num_epochs = 1  # int(np.random.uniform(1.0, 4.0))
+    dropout = 1  # np.random.uniform(.5, 1.0)
+    hidden_dim_size = 800  # int(np.random.uniform(200, 3200))
     use_emb_model = True
     use_char_model = True
     model_save_dir = EMB_CHAR_HUMOR_MODEL_DIR

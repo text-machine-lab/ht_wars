@@ -104,7 +104,7 @@ def build_humor_model(vocab_size, use_embedding_model=True, use_character_model=
     # Print model variables (debug)
     trainable_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
     for var in trainable_vars:
-        print var.name
+        print var.name + ' ' + str(var.get_shape())
 
     return [tf_first_input_tweets, tf_second_input_tweets, output, tf_tweet_humor_rating, tf_batch_size, tf_hashtag,
             output_prob, tf_dropout_rate, tf_tweet1, tf_tweet2]  # Model vars
