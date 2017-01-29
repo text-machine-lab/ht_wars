@@ -16,7 +16,7 @@ from config import BOOST_TREE_TWEET_PAIR_TRAINING_DIR
 from config import BOOST_TREE_TWEET_PAIR_TESTING_DIR
 from config import MONGO_ADDRESS
 
-ex_name = 'hashtagwars_boost_tree_lightgbm'
+ex_name = 'hashtagwars_boost_tree'
 ex = Experiment(ex_name)
 
 ex.observers.append(MongoObserver.create(url=MONGO_ADDRESS, db_name=ex_name))
