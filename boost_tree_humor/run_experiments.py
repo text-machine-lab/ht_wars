@@ -10,7 +10,7 @@ from tree_model import ex
 
 def main():
     nb_samples = 3000
-    target_model = 'lightgbm'
+    target_model = 'xgboost'
 
     models = {
         'xgboost': {
@@ -19,10 +19,10 @@ def main():
             },
             'params': {
                 'max_depth': lambda: int(np.random.uniform(2, 50)),
-                'eta': lambda: 10 ** np.random.uniform(-6, -1.5),
+                'eta': lambda: 10 ** np.random.uniform(-6, -1.0),
                 'gamma': lambda: int(np.random.uniform(1, 20)),
-                'reg_lambda': lambda: 10 ** np.random.uniform(-6, -1.5),
-                'num_round': lambda: int(np.random.uniform(1, 20)),
+                'reg_lambda': lambda: 10 ** np.random.uniform(-6, -1.0),
+                'num_round': lambda: int(np.random.uniform(1, 30)),
             },
         },
         'lightgbm': {
@@ -38,7 +38,6 @@ def main():
             },
         },
     }
-
 
     default_params = models[target_model]['default_params']
     params = models[target_model]['params']
