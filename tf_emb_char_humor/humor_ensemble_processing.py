@@ -10,9 +10,11 @@ from config import EMB_CHAR_HUMOR_MODEL_DIR, CHAR_HUMOR_MODEL_DIR, EMB_HUMOR_MOD
 from config import HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR, HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
 from config import HUMOR_CHAR_TO_INDEX_FILE_PATH, SEMEVAL_HUMOR_TRAIN_DIR
 from config import HUMOR_TRAIN_TWEET_PAIR_PREDICTIONS, HUMOR_TRAIN_PREDICTION_HASHTAGS
+from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR, HUMOR_TRAIN_PREDICTION_LABELS
 from config import SEMEVAL_HUMOR_TRIAL_DIR
 from tf_tools import GPU_OPTIONS
 from tools import load_hashtag_data_and_vocabulary, get_hashtag_file_names
+from tools import load_hashtag_data
 
 
 learning_rate = .00005
@@ -34,14 +36,24 @@ def main():
                                                    use_char_model=True,
                                                    seed=sync_seed)
 
-    emb_predictions, hashtag_names, emb_accuracies = \
+    print 'Testing hashtags correspond to prediction arrays'
+    for i in range(len(hashtag_names)):
+        hashtag_name = hashtag_names[i]
+        num_lines = sum(1 for line in open(SEMEVAL_HUMOR_TRAIN_DIR + hashtag_name + '.tsv'))
+        if emb_char_predictions[i].shape[0] != num_lines * 10 - 91:
+            print hashtag_name
+            print 'Line count does not match'
+            print num_lines
+            print emb_char_predictions[i].shape
+
+    emb_predictions, hashtag_names2, emb_accuracies = \
         train_and_make_predictions_on_all_hashtags(num_groups,
                                                    model_save_dir=EMB_HUMOR_MODEL_DIR,
                                                    use_emb_model=True,
                                                    use_char_model=False,
                                                    seed=sync_seed)
 
-    char_predictions, hashtag_names, char_accuracies = \
+    char_predictions, hashtag_names3, char_accuracies = \
         train_and_make_predictions_on_all_hashtags(num_groups,
                                                    model_save_dir=CHAR_HUMOR_MODEL_DIR,
                                                    use_emb_model=False,
@@ -52,6 +64,17 @@ def main():
     assert len(emb_predictions) == len(char_predictions)
     assert len(char_predictions) == len(hashtag_names)
     print str(char_predictions[0].shape)
+    assert hashtag_names == hashtag_names2
+    assert hashtag_names2 == hashtag_names3
+    random.seed(sync_seed)
+    hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRAIN_DIR)
+    # Get labels
+    hashtag_labels = []
+    for hashtag_name in hashtag_names:
+        print 'Loading label for hashtag %s' % hashtag_name
+        np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag = \
+            load_hashtag_data(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR, hashtag_name)
+        hashtag_labels.append(np_labels)
 
     all_predictions = []
     for i in range(len(hashtag_names)):
@@ -59,8 +82,10 @@ def main():
             [np.reshape(emb_char_predictions[i], [-1, 1]), np.reshape(emb_predictions[i], [-1, 1]), np.reshape(char_predictions[i], [-1, 1])], axis=1)
         all_predictions.append(hashtag_all_predictions)
 
+    # Save
     pickle.dump(all_predictions, open(HUMOR_TRAIN_TWEET_PAIR_PREDICTIONS, 'wb'))
     pickle.dump(hashtag_names, open(HUMOR_TRAIN_PREDICTION_HASHTAGS, 'wb'))
+    pickle.dump(hashtag_labels, open(HUMOR_TRAIN_PREDICTION_LABELS, 'wb'))
 
 
 def train_and_make_predictions_on_all_hashtags(num_groups, model_save_dir=EMB_CHAR_HUMOR_MODEL_DIR, use_emb_model=True, use_char_model=True, seed=None):
@@ -74,23 +99,35 @@ def train_and_make_predictions_on_all_hashtags(num_groups, model_save_dir=EMB_CH
     if seed is not None:
         random.seed(seed)
     hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRAIN_DIR)
+    print len(hashtag_names)
     hashtag_predictions = []
     hashtag_accuracies = []
 
+    # for i in range(len(hashtag_names)):
+    #     hashtag_name = hashtag_names[i]
+    #     num_lines = sum(1 for line in open(SEMEVAL_HUMOR_TRAIN_DIR + hashtag_name + '.tsv'))
     for hashtag_group_index in range(num_groups):
 
         # Train on all hashtags not in group
-        K.clear_session()
-        hashtags_in_group, trainable_vars = train_on_hashtags_in_group(hashtag_names, hashtag_group_index,
-                                                                       num_groups, model_save_dir, use_emb_model,
-                                                                       use_char_model)
+        # K.clear_session()
+        # hashtags_in_group, trainable_vars = train_on_hashtags_in_group(hashtag_names, hashtag_group_index,
+        #                                                                num_groups, model_save_dir, use_emb_model,
+        #                                                                use_char_model)
 
         # Predict on hashtags in group
         K.clear_session()
         hp = humor_predictor.HumorPredictor(model_save_dir, use_char_model=use_char_model, use_emb_model=use_emb_model)
         # K.set_session(tf.get_default_session())
         accuracies = []
+
+        num_hashtags = len(hashtag_names)
+        num_hashtags_in_group = num_hashtags / num_groups
+        starting_hashtag_index = num_hashtags_in_group * hashtag_group_index
+        hashtags_in_group = hashtag_names[starting_hashtag_index:starting_hashtag_index + num_hashtags_in_group]
+
+        counter = 0
         for hashtag_name in hashtags_in_group:
+            assert hashtag_names[hashtag_group_index * num_hashtags_in_group + counter] == hashtag_name
             print hashtag_name
             np_predictions, np_output_prob, np_labels = hp(SEMEVAL_HUMOR_TRAIN_DIR, hashtag_name)
             accuracy = np.mean(np_predictions == np_labels)
@@ -98,6 +135,17 @@ def train_and_make_predictions_on_all_hashtags(num_groups, model_save_dir=EMB_CH
             accuracies.append(accuracy)
             hashtag_predictions.append(np_predictions)
             hashtag_accuracies.append(accuracy)
+
+            print hashtag_name
+            print np_predictions.shape
+            # num_lines = sum(1 for line in open(SEMEVAL_HUMOR_TRAIN_DIR + hashtag_name + '.tsv'))
+            # if np_predictions.shape[0] != num_lines * 10 - 91:
+            #     print hashtag_name
+            #     print 'Line count does not match'
+            #     print num_lines
+            #     print np_predictions.shape
+
+            counter += 1
         print 'Trial accuracy: %s' % np.mean(accuracies)
     return hashtag_predictions, hashtag_names, hashtag_accuracies
 

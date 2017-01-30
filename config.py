@@ -37,6 +37,7 @@ CHAR_HUMOR_MODEL_DIR = os.path.join(DATA_DIR, 'char-only_humor_models/')
 # Prediction input for ensemble model
 HUMOR_TRAIN_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'train_tweet_pair_predictions.cpkl')
 HUMOR_TRAIN_PREDICTION_HASHTAGS = os.path.join(DATA_DIR, 'train_prediction_hashtags')
+HUMOR_TRAIN_PREDICTION_LABELS = os.path.join(DATA_DIR, 'train_prediction_labels')
 
 HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR = os.path.join(DATA_DIR, 'train_numpy_tweet_pairs/')
 HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR = os.path.join(DATA_DIR, 'trial_numpy_tweet_pairs/')
