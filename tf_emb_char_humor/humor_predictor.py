@@ -78,7 +78,7 @@ class HumorPredictor:
                                                              self.tf_dropout_rate: 1.0,
                                                              self.tf_tweet1: np_first_tweets_char,
                                                              self.tf_tweet2: np_second_tweets_char})
-        return np_predictions, np_output_prob, np_labels
+        return np_predictions, np_output_prob, np_labels, first_tweet_ids, second_tweet_ids
 
 
 def restore_model_from_save(model_var_dir, sess=None):
@@ -106,7 +106,7 @@ def main():
     accuracies = []
     for hashtag_name in hashtag_names:
         print hashtag_name
-        np_predictions, np_output_prob, np_labels = hp(SEMEVAL_HUMOR_TRIAL_DIR, hashtag_name)
+        np_predictions, np_output_prob, np_labels, first_tweet_ids, second_tweet_ids = hp(SEMEVAL_HUMOR_TRIAL_DIR, hashtag_name)
         accuracy = np.mean(np_predictions == np_labels)
         print np_output_prob
         print np_predictions
@@ -115,7 +115,7 @@ def main():
     print 'Trial accuracy: %s' % np.mean(accuracies)
     for hashtag_name in eval_hashtag_names:
         print hashtag_name
-        np_predictions2, np_output_prob, np_labels = hp(SEMEVAL_HUMOR_EVAL_DIR, hashtag_name)
+        np_predictions2, np_output_prob, np_labels, first_tweet_ids, second_tweet_ids = hp(SEMEVAL_HUMOR_EVAL_DIR, hashtag_name)
         print np_output_prob
         print np_predictions2
         print np_labels

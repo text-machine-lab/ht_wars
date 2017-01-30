@@ -46,14 +46,14 @@ ex = Experiment('humor_model')
 ex.observers.append(MongoObserver.create(db_name='humor_runs'))
 
 EMBEDDING_HUMOR_MODEL_LEARNING_RATE = .00005
-N_TRAIN_EPOCHS = 1
+N_TRAIN_EPOCHS = 2
 
 
 @ex.config
 def my_config():
-    learning_rate = .00005  # np.random.uniform(.00005, .0000005)
-    num_epochs = 1  # int(np.random.uniform(1.0, 4.0))
-    dropout = 1  # np.random.uniform(.5, 1.0)
+    learning_rate = .0000486  # np.random.uniform(.00005, .0000005)
+    num_epochs = 2  # int(np.random.uniform(1.0, 4.0))
+    dropout = .654  # np.random.uniform(.5, 1.0)
     hidden_dim_size = 800  # int(np.random.uniform(200, 3200))
     use_emb_model = True
     use_char_model = True
@@ -113,14 +113,17 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
     for epoch in range(n_epochs):
         if n_epochs > 1:
             print 'Epoch %s' % epoch
+        print hashtag_names
         for trainer_hashtag_name in hashtag_names:
+            print trainer_hashtag_name
             if trainer_hashtag_name not in leave_out_hashtags:
                 # Train on this hashtag.
+                print 'Got here first.'
                 np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag = \
                     load_hashtag_data(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR, trainer_hashtag_name)
 
-                np_first_tweets_char, np_second_tweets_char = extract_tweet_pair_from_hashtag_datas(hashtag_datas,
-                                                                                                    hashtag_name=trainer_hashtag_name)
+                np_first_tweets_char, np_second_tweets_char = \
+                    extract_tweet_pair_from_hashtag_datas(hashtag_datas, trainer_hashtag_name)
                 current_batch_size = batch_size
                 # Use these parameters to keep track of batch size and start location.
                 starting_training_example = 0
@@ -280,7 +283,7 @@ def main(learning_rate, num_epochs, dropout, use_emb_model,
 
 
 if __name__ == '__main__':
-    num_experiments_run = 100
+    num_experiments_run = 1
     for index in range(num_experiments_run):
         print 'Experiment: %s' % index
         r = ex.run()

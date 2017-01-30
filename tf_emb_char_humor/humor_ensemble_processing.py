@@ -36,16 +36,6 @@ def main():
                                                    use_char_model=True,
                                                    seed=sync_seed)
 
-    print 'Testing hashtags correspond to prediction arrays'
-    for i in range(len(hashtag_names)):
-        hashtag_name = hashtag_names[i]
-        num_lines = sum(1 for line in open(SEMEVAL_HUMOR_TRAIN_DIR + hashtag_name + '.tsv'))
-        if emb_char_predictions[i].shape[0] != num_lines * 10 - 91:
-            print hashtag_name
-            print 'Line count does not match'
-            print num_lines
-            print emb_char_predictions[i].shape
-
     emb_predictions, hashtag_names2, emb_accuracies = \
         train_and_make_predictions_on_all_hashtags(num_groups,
                                                    model_save_dir=EMB_HUMOR_MODEL_DIR,
@@ -108,49 +98,43 @@ def train_and_make_predictions_on_all_hashtags(num_groups, model_save_dir=EMB_CH
     #     num_lines = sum(1 for line in open(SEMEVAL_HUMOR_TRAIN_DIR + hashtag_name + '.tsv'))
     for hashtag_group_index in range(num_groups):
 
-        # Train on all hashtags not in group
-        # K.clear_session()
-        # hashtags_in_group, trainable_vars = train_on_hashtags_in_group(hashtag_names, hashtag_group_index,
-        #                                                                num_groups, model_save_dir, use_emb_model,
-        #                                                                use_char_model)
-
-        # Predict on hashtags in group
-        K.clear_session()
-        hp = humor_predictor.HumorPredictor(model_save_dir, use_char_model=use_char_model, use_emb_model=use_emb_model)
-        # K.set_session(tf.get_default_session())
-        accuracies = []
-
         num_hashtags = len(hashtag_names)
-        num_hashtags_in_group = num_hashtags / num_groups
+        num_hashtags_in_group = num_hashtags / num_groups + 1
         starting_hashtag_index = num_hashtags_in_group * hashtag_group_index
         hashtags_in_group = hashtag_names[starting_hashtag_index:starting_hashtag_index + num_hashtags_in_group]
 
-        counter = 0
-        for hashtag_name in hashtags_in_group:
-            assert hashtag_names[hashtag_group_index * num_hashtags_in_group + counter] == hashtag_name
-            print hashtag_name
-            np_predictions, np_output_prob, np_labels = hp(SEMEVAL_HUMOR_TRAIN_DIR, hashtag_name)
-            accuracy = np.mean(np_predictions == np_labels)
-            print 'Hashtag accuracy: %s' % accuracy
-            accuracies.append(accuracy)
-            hashtag_predictions.append(np_predictions)
-            hashtag_accuracies.append(accuracy)
-
-            print hashtag_name
-            print np_predictions.shape
-            # num_lines = sum(1 for line in open(SEMEVAL_HUMOR_TRAIN_DIR + hashtag_name + '.tsv'))
-            # if np_predictions.shape[0] != num_lines * 10 - 91:
-            #     print hashtag_name
-            #     print 'Line count does not match'
-            #     print num_lines
-            #     print np_predictions.shape
-
-            counter += 1
-        print 'Trial accuracy: %s' % np.mean(accuracies)
+        print hashtag_group_index, starting_hashtag_index, starting_hashtag_index + num_hashtags_in_group, num_hashtags_in_group
+        print hashtags_in_group
+        #
+        # # Train on all hashtags not in group
+        # # K.clear_session()
+        # hashtags_in_group, trainable_vars = train_on_hashtags_in_group(hashtag_names, hashtags_in_group,
+        #                                                                model_save_dir, use_emb_model,
+        #                                                                use_char_model)
+        #
+        # # Predict on hashtags in group
+        # K.clear_session()
+        # hp = humor_predictor.HumorPredictor(model_save_dir, use_char_model=use_char_model, use_emb_model=use_emb_model)
+        # accuracies = []
+        # counter = 0
+        # for hashtag_name in hashtags_in_group:
+        #     assert hashtag_names[hashtag_group_index * num_hashtags_in_group + counter] == hashtag_name
+        #     print hashtag_name
+        #     np_predictions, np_output_prob, np_labels, first_tweet_ids, second_tweet_ids = hp(SEMEVAL_HUMOR_TRAIN_DIR, hashtag_name)
+        #     accuracy = np.mean(np_predictions == np_labels)
+        #     print 'Hashtag accuracy: %s' % accuracy
+        #     accuracies.append(accuracy)
+        #     hashtag_predictions.append(np_predictions)
+        #     hashtag_accuracies.append(accuracy)
+        #
+        #     print hashtag_name
+        #     print np_predictions.shape
+        #     counter += 1
+        # print 'Trial accuracy: %s' % np.mean(accuracies)
     return hashtag_predictions, hashtag_names, hashtag_accuracies
 
 
-def train_on_hashtags_in_group(hashtag_names, hashtag_group_index, num_groups,
+def train_on_hashtags_in_group(hashtag_names, hashtags_in_group,
                                model_save_dir, use_emb_model, use_char_model):
     """Given a list of hashtag names, divide into num_groups and train on all hashtags
     but those in that group. Save trained model in model_save_dir.
@@ -158,19 +142,12 @@ def train_on_hashtags_in_group(hashtag_names, hashtag_group_index, num_groups,
     use_emb_model - flag indicating whether to train using word embeddings as features
     use_char_model - flag indicating whether to train using character indices as features
     model_save_dir - location to save model, should correspond with model configuration"""
-    num_hashtags = len(hashtag_names)
-    num_hashtags_in_group = num_hashtags / num_groups
-    starting_hashtag_index = num_hashtags_in_group * hashtag_group_index
-    if hashtag_group_index == num_groups - 1:
-        num_hashtags_in_group = num_hashtags - starting_hashtag_index
-    hashtags_in_group = hashtag_names[starting_hashtag_index:starting_hashtag_index + num_hashtags_in_group]
-    print hashtags_in_group
-    print len(hashtags_in_group)
+
     load_build_train_and_predict(learning_rate, num_epochs, dropout, use_emb_model,
                                  use_char_model, model_save_dir, hidden_dim_size,
                                  leave_out_hashtags=hashtags_in_group)
     trainable_vars = tf.trainable_variables()
-    return hashtags_in_group, trainable_vars
+    return trainable_vars
 
 
 if __name__ == '__main__':
