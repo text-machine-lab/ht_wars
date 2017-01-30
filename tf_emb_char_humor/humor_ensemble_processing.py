@@ -106,31 +106,34 @@ def train_and_make_predictions_on_all_hashtags(num_groups, model_save_dir=EMB_CH
         print hashtag_group_index, starting_hashtag_index, starting_hashtag_index + num_hashtags_in_group, num_hashtags_in_group
         print hashtags_in_group
         #
-        # # Train on all hashtags not in group
-        # # K.clear_session()
-        # hashtags_in_group, trainable_vars = train_on_hashtags_in_group(hashtag_names, hashtags_in_group,
-        #                                                                model_save_dir, use_emb_model,
-        #                                                                use_char_model)
-        #
-        # # Predict on hashtags in group
+        # Train on all hashtags not in group
         # K.clear_session()
-        # hp = humor_predictor.HumorPredictor(model_save_dir, use_char_model=use_char_model, use_emb_model=use_emb_model)
-        # accuracies = []
-        # counter = 0
-        # for hashtag_name in hashtags_in_group:
-        #     assert hashtag_names[hashtag_group_index * num_hashtags_in_group + counter] == hashtag_name
-        #     print hashtag_name
-        #     np_predictions, np_output_prob, np_labels, first_tweet_ids, second_tweet_ids = hp(SEMEVAL_HUMOR_TRAIN_DIR, hashtag_name)
-        #     accuracy = np.mean(np_predictions == np_labels)
-        #     print 'Hashtag accuracy: %s' % accuracy
-        #     accuracies.append(accuracy)
-        #     hashtag_predictions.append(np_predictions)
-        #     hashtag_accuracies.append(accuracy)
-        #
-        #     print hashtag_name
-        #     print np_predictions.shape
-        #     counter += 1
-        # print 'Trial accuracy: %s' % np.mean(accuracies)
+        hashtags_in_group, trainable_vars = train_on_hashtags_in_group(hashtag_names, hashtags_in_group,
+                                                                       model_save_dir, use_emb_model,
+                                                                       use_char_model)
+
+        # Predict on hashtags in group
+        K.clear_session()
+        hp = humor_predictor.HumorPredictor(model_save_dir, use_char_model=use_char_model, use_emb_model=use_emb_model)
+        accuracies = []
+        counter = 0
+        for hashtag_name in hashtags_in_group:
+            assert hashtag_names[hashtag_group_index * num_hashtags_in_group + counter] == hashtag_name
+            print hashtag_name
+            np_predictions, np_output_prob, np_labels, first_tweet_ids, second_tweet_ids = hp(SEMEVAL_HUMOR_TRAIN_DIR, hashtag_name)
+            # np_first_tweets2, np_second_tweets2, np_labels2, first_tweet_ids2, second_tweet_ids2, np_hashtag2 = \
+            #     load_hashtag_data(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR, hashtag_name)
+            # assert np_labels == np_labels2
+            accuracy = np.mean(np_predictions == np_labels)
+            print 'Hashtag accuracy: %s' % accuracy
+            accuracies.append(accuracy)
+            hashtag_predictions.append(np_predictions)
+            hashtag_accuracies.append(accuracy)
+
+            print hashtag_name
+            print np_predictions.shape
+            counter += 1
+        print 'Trial accuracy: %s' % np.mean(accuracies)
     return hashtag_predictions, hashtag_names, hashtag_accuracies
 
 
