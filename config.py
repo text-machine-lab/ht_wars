@@ -52,6 +52,8 @@ HUMOR_TRIAL_PREDICTION_SECOND_TWEET_IDS = os.path.join(DATA_DIR, 'trial_predicti
 HUMOR_EVAL_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'eval_tweet_pair_predictions.cpkl')
 HUMOR_EVAL_PREDICTION_HASHTAGS = os.path.join(DATA_DIR, 'eval_prediction_hashtags.cpkl')
 HUMOR_EVAL_PREDICTION_LABELS = os.path.join(DATA_DIR, 'eval_prediction_labels.cpkl')
+HUMOR_EVAL_PREDICTION_FIRST_TWEET_IDS = os.path.join(DATA_DIR, 'eval_prediction_first_tweet_ids.cpkl')
+HUMOR_EVAL_PREDICTION_SECOND_TWEET_IDS = os.path.join(DATA_DIR, 'eval_prediction_second_tweet_ids.cpkl')
 
 HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR = os.path.join(DATA_DIR, 'train_numpy_tweet_pairs/')
 HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR = os.path.join(DATA_DIR, 'trial_numpy_tweet_pairs/')
@@ -64,7 +66,6 @@ HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR = os.path.join(DATA_DIR, 'training_tweet_pa
 HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR = os.path.join(DATA_DIR, 'trial_tweet_pair_embeddings/')
 
 # Boost tree humor model paths
-# TODO: remove those dirs
 # BOOST_TREE_TWEET_PAIR_TRAINING_DIR = os.path.join(DATA_DIR, 'training_tweet_pair_tree_data/')
 # BOOST_TREE_TWEET_PAIR_TESTING_DIR = os.path.join(DATA_DIR, 'testing_tweet_pair_tree_data/')
 BOOST_TREE_TWEET_PAIR_TRAIN_DIR = os.path.join(DATA_DIR, 'tree_train_and_trial_data/')
