@@ -14,7 +14,7 @@ TWEET_PAIR_LABEL_RANDOM_SEED = 'hello world'
 WORD_VECTORS_FILE_PATH = os.path.join(DATA_DIR, 'glove.twitter.27B/glove.twitter.27B.200d.txt')
 
 # Main #HashtagWars dataset paths
-SEMEVAL_HUMOR_TRAIN_DIR = os.path.join(DATA_DIR, 'train_and_trial_data/')
+SEMEVAL_HUMOR_TRAIN_DIR = os.path.join(DATA_DIR, 'train_dir/train_data/')
 SEMEVAL_HUMOR_TRIAL_DIR = os.path.join(DATA_DIR, 'trial_dir/trial_data/')
 SEMEVAL_HUMOR_EVAL_DIR = os.path.join(DATA_DIR, 'evaluation_dir/evaluation_data/')
 
@@ -36,10 +36,22 @@ EMB_CHAR_HUMOR_MODEL_DIR = os.path.join(DATA_DIR, 'humor_models/')
 EMB_HUMOR_MODEL_DIR = os.path.join(DATA_DIR, 'emb-only_humor_models/')
 CHAR_HUMOR_MODEL_DIR = os.path.join(DATA_DIR, 'char-only_humor_models/')
 
-# Prediction input for ensemble model
+# Prediction input for ensemble model (training)
 HUMOR_TRAIN_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'train_tweet_pair_predictions.cpkl')
 HUMOR_TRAIN_PREDICTION_HASHTAGS = os.path.join(DATA_DIR, 'train_prediction_hashtags')
 HUMOR_TRAIN_PREDICTION_LABELS = os.path.join(DATA_DIR, 'train_prediction_labels')
+
+# Prediction input for ensemble model (trial)
+HUMOR_TRIAL_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'trial_tweet_pair_predictions.cpkl')
+HUMOR_TRIAL_PREDICTION_HASHTAGS = os.path.join(DATA_DIR, 'trial_prediction_hashtags.cpkl')
+HUMOR_TRIAL_PREDICTION_LABELS = os.path.join(DATA_DIR, 'trial_prediction_labels.cpkl')
+HUMOR_TRIAL_PREDICTION_FIRST_TWEET_IDS = os.path.join(DATA_DIR, 'trial_prediction_first_tweet_ids.cpkl')
+HUMOR_TRIAL_PREDICTION_SECOND_TWEET_IDS = os.path.join(DATA_DIR, 'trial_prediction_second_tweet_ids.cpkl')
+
+# Prediction input for ensemble model (evaluation)
+HUMOR_EVAL_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'eval_tweet_pair_predictions.cpkl')
+HUMOR_EVAL_PREDICTION_HASHTAGS = os.path.join(DATA_DIR, 'eval_prediction_hashtags.cpkl')
+HUMOR_EVAL_PREDICTION_LABELS = os.path.join(DATA_DIR, 'eval_prediction_labels.cpkl')
 
 HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR = os.path.join(DATA_DIR, 'train_numpy_tweet_pairs/')
 HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR = os.path.join(DATA_DIR, 'trial_numpy_tweet_pairs/')

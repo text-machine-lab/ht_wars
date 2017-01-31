@@ -107,13 +107,15 @@ def train_and_make_predictions_on_all_hashtags(num_groups, model_save_dir=EMB_CH
         print hashtags_in_group
         #
         # Train on all hashtags not in group
-        # K.clear_session()
-        hashtags_in_group, trainable_vars = train_on_hashtags_in_group(hashtag_names, hashtags_in_group,
+        K.clear_session()
+        K.set_session(tf.get_default_session())
+        trainable_vars = train_on_hashtags_in_group(hashtag_names, hashtags_in_group,
                                                                        model_save_dir, use_emb_model,
                                                                        use_char_model)
 
         # Predict on hashtags in group
         K.clear_session()
+        K.set_session(tf.get_default_session())
         hp = humor_predictor.HumorPredictor(model_save_dir, use_char_model=use_char_model, use_emb_model=use_emb_model)
         accuracies = []
         counter = 0
@@ -127,7 +129,7 @@ def train_and_make_predictions_on_all_hashtags(num_groups, model_save_dir=EMB_CH
             accuracy = np.mean(np_predictions == np_labels)
             print 'Hashtag accuracy: %s' % accuracy
             accuracies.append(accuracy)
-            hashtag_predictions.append(np_predictions)
+            hashtag_predictions.append(np_output_prob)
             hashtag_accuracies.append(accuracy)
 
             print hashtag_name

@@ -51,9 +51,9 @@ N_TRAIN_EPOCHS = 2
 
 @ex.config
 def my_config():
-    learning_rate = .0000486  # np.random.uniform(.00005, .0000005)
-    num_epochs = 2  # int(np.random.uniform(1.0, 4.0))
-    dropout = .654  # np.random.uniform(.5, 1.0)
+    learning_rate = .00005  # np.random.uniform(.00005, .0000005)
+    num_epochs = 1  # int(np.random.uniform(1.0, 4.0))
+    dropout = 1  # np.random.uniform(.5, 1.0)
     hidden_dim_size = 800  # int(np.random.uniform(200, 3200))
     use_emb_model = True
     use_char_model = True
