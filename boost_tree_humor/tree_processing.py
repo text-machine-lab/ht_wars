@@ -8,14 +8,14 @@ from collections import Counter
 import scipy.spatial.distance
 from nltk import pos_tag
 
-from tools import get_hashtag_file_names
+from tools import get_hashtag_file_names, extract_tweet_pairs_by_combination
 from tools import load_tweets_from_hashtag
 from tools import extract_tweet_pairs_by_rank
 from tools import remove_hashtag_from_tweets
-from config import SEMEVAL_HUMOR_TRAIN_DIR, HUMOR_WORD_TO_GLOVE_FILE_PATH
+from config import SEMEVAL_HUMOR_TRAIN_DIR, HUMOR_WORD_TO_GLOVE_FILE_PATH, SEMEVAL_HUMOR_EVAL_DIR
 from config import TWEET_PAIR_LABEL_RANDOM_SEED
-from config import BOOST_TREE_TWEET_PAIR_TRAINING_DIR
-from config import BOOST_TREE_TWEET_PAIR_TESTING_DIR
+from config import BOOST_TREE_TWEET_PAIR_TRAIN_DIR
+from config import BOOST_TREE_TWEET_PAIR_EVAL_DIR
 from twitter_hawk import TwitterHawk
 from twitter_hawk import TWITTERHAWK_ADDRESS
 from config import SEMEVAL_HUMOR_TRIAL_DIR
@@ -35,15 +35,15 @@ from config import SEMEVAL_HUMOR_TRIAL_DIR
 
 
 def main():
-    if not os.path.exists(BOOST_TREE_TWEET_PAIR_TRAINING_DIR):
-        os.makedirs(BOOST_TREE_TWEET_PAIR_TRAINING_DIR)
-    if not os.path.exists(BOOST_TREE_TWEET_PAIR_TESTING_DIR):
-        os.makedirs(BOOST_TREE_TWEET_PAIR_TESTING_DIR)
+    if not os.path.exists(BOOST_TREE_TWEET_PAIR_TRAIN_DIR):
+        os.makedirs(BOOST_TREE_TWEET_PAIR_TRAIN_DIR)
+    if not os.path.exists(BOOST_TREE_TWEET_PAIR_EVAL_DIR):
+        os.makedirs(BOOST_TREE_TWEET_PAIR_EVAL_DIR)
 
     print 'Starting program'
 
-    generate_tree_model_input_data_from_dir(SEMEVAL_HUMOR_TRAIN_DIR, BOOST_TREE_TWEET_PAIR_TRAINING_DIR)
-    generate_tree_model_input_data_from_dir(SEMEVAL_HUMOR_TRIAL_DIR, BOOST_TREE_TWEET_PAIR_TESTING_DIR)
+    generate_tree_model_input_data_from_dir(SEMEVAL_HUMOR_TRAIN_DIR, BOOST_TREE_TWEET_PAIR_TRAIN_DIR)
+    generate_tree_model_input_data_from_dir(SEMEVAL_HUMOR_EVAL_DIR, BOOST_TREE_TWEET_PAIR_EVAL_DIR)
 
 
 def generate_tree_model_input_data_from_dir(directory, output_dir):
@@ -64,12 +64,21 @@ def generate_tree_model_input_data_from_dir(directory, output_dir):
         tweets = remove_hashtag_from_tweets(tweets)
         print 'Creating tweet pairs'
         random.seed(TWEET_PAIR_LABEL_RANDOM_SEED)
-        tweet_pairs = extract_tweet_pairs_by_rank(tweets, tweet_labels, tweet_ids)
+
+        if len(tweet_labels) > 0:
+            tweet_pairs = extract_tweet_pairs_by_rank(tweets, tweet_labels, tweet_ids)
+        else:
+            tweet_pairs = extract_tweet_pairs_by_combination(tweets, tweet_ids)
+
         tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
         tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
         tweet2 = [tweet_pair[2] for tweet_pair in tweet_pairs]
         tweet2_id = [tweet_pair[3] for tweet_pair in tweet_pairs]
-        labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
+
+        if len(tweet_labels) > 0:
+            labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
+        else:
+            labels = []
 
         # Numpy arrays of features can be added to this list to be automatically inserted into model input.
         list_of_features = []

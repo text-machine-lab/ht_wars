@@ -12,8 +12,8 @@ from sacred import Experiment
 from tools import get_hashtag_file_names
 from config import SEMEVAL_HUMOR_TRAIN_DIR
 from config import SEMEVAL_HUMOR_TRIAL_DIR
-from config import BOOST_TREE_TWEET_PAIR_TRAINING_DIR
-from config import BOOST_TREE_TWEET_PAIR_TESTING_DIR
+from config import BOOST_TREE_TWEET_PAIR_TRAIN_DIR
+from config import BOOST_TREE_TWEET_PAIR_TRIAL_DIR
 from config import MONGO_ADDRESS
 
 ex_name = 'hashtagwars_boost_tree'
@@ -111,10 +111,10 @@ def xgboost():
     objective = 'binary:logistic'
 
     max_depth = 4
-    eta = 0.020  # learning_rate
-    gamma = 4  # min_split_loss
-    reg_lambda = 2.5e-06
-    num_round = 19
+    eta = 0.038  # learning_rate
+    gamma = 2  # min_split_loss
+    reg_lambda = 1.03e-05
+    num_round = 10
     silent = 0
 
 
@@ -141,8 +141,8 @@ def main(_config):
     list_of_labels = []
     list_of_datas = []
     for hashtag_name in train_hashtag_names:
-        np_hashtag_labels = np.load(open(BOOST_TREE_TWEET_PAIR_TRAINING_DIR + hashtag_name + '_labels.npy', 'rb'))
-        np_hashtag_data = np.load(open(BOOST_TREE_TWEET_PAIR_TRAINING_DIR + hashtag_name + '_data.npy', 'rb'))
+        np_hashtag_labels = np.load(open(BOOST_TREE_TWEET_PAIR_TRAIN_DIR + hashtag_name + '_labels.npy', 'rb'))
+        np_hashtag_data = np.load(open(BOOST_TREE_TWEET_PAIR_TRAIN_DIR + hashtag_name + '_data.npy', 'rb'))
         list_of_labels.append(np_hashtag_labels)
         list_of_datas.append(np_hashtag_data)
     np_data = np.vstack(list_of_datas)
@@ -171,8 +171,8 @@ def main(_config):
     list_of_accuracies = []
     for hashtag_name in test_hashtag_names:
         print 'Testing on hashtag %s' % hashtag_name
-        np_label_test = np.load(open(BOOST_TREE_TWEET_PAIR_TESTING_DIR + hashtag_name + '_labels.npy', 'rb'))
-        np_data_test = np.load(open(BOOST_TREE_TWEET_PAIR_TESTING_DIR + hashtag_name + '_data.npy', 'rb'))
+        np_label_test = np.load(open(BOOST_TREE_TWEET_PAIR_TRIAL_DIR + hashtag_name + '_labels.npy', 'rb'))
+        np_data_test = np.load(open(BOOST_TREE_TWEET_PAIR_TRIAL_DIR + hashtag_name + '_data.npy', 'rb'))
 
         accuracy_test = model.evaluate(np_data_test, np_label_test)
         list_of_accuracies.append(accuracy_test)

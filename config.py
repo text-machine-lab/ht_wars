@@ -64,8 +64,13 @@ HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR = os.path.join(DATA_DIR, 'training_tweet_pa
 HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR = os.path.join(DATA_DIR, 'trial_tweet_pair_embeddings/')
 
 # Boost tree humor model paths
-BOOST_TREE_TWEET_PAIR_TRAINING_DIR = os.path.join(DATA_DIR, 'training_tweet_pair_tree_data/')
-BOOST_TREE_TWEET_PAIR_TESTING_DIR = os.path.join(DATA_DIR, 'testing_tweet_pair_tree_data/')
+# TODO: remove those dirs
+# BOOST_TREE_TWEET_PAIR_TRAINING_DIR = os.path.join(DATA_DIR, 'training_tweet_pair_tree_data/')
+# BOOST_TREE_TWEET_PAIR_TESTING_DIR = os.path.join(DATA_DIR, 'testing_tweet_pair_tree_data/')
+BOOST_TREE_TWEET_PAIR_TRAIN_DIR = os.path.join(DATA_DIR, 'tree_train_and_trial_data/')
+BOOST_TREE_TWEET_PAIR_TRIAL_DIR = os.path.join(DATA_DIR, 'testing_tweet_pair_tree_data/')
+BOOST_TREE_TWEET_PAIR_EVAL_DIR = os.path.join(DATA_DIR, 'tree_eval_data/')
+BOOST_TREE_TRAIN_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'boost_tree_train_tweet_pair_predictions.cpkl')
 
 # PARAMETERS
 HUMOR_MAX_WORDS_IN_TWEET = 20  # All winning tweets are under 30 words long
@@ -76,3 +81,5 @@ PHONETIC_EMB_SIZE = 200
 
 # Mongo for Sacred's observer
 MONGO_ADDRESS = '127.0.0.1:27018'
+
+ENSEMBLE_DIR = os.path.join(DATA_DIR, 'ensemble/')
