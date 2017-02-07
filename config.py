@@ -68,10 +68,18 @@ HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR = os.path.join(DATA_DIR, 'trial_tweet_pair_
 # Boost tree humor model paths
 # BOOST_TREE_TWEET_PAIR_TRAINING_DIR = os.path.join(DATA_DIR, 'training_tweet_pair_tree_data/')
 # BOOST_TREE_TWEET_PAIR_TESTING_DIR = os.path.join(DATA_DIR, 'testing_tweet_pair_tree_data/')
-BOOST_TREE_TWEET_PAIR_TRAIN_DIR = os.path.join(DATA_DIR, 'tree_train_and_trial_data/')
-BOOST_TREE_TWEET_PAIR_TRIAL_DIR = os.path.join(DATA_DIR, 'testing_tweet_pair_tree_data/')
+
+# Boost tree model data
+BOOST_TREE_TWEET_PAIR_TRAIN_DIR = os.path.join(DATA_DIR, 'tree_train_data/')
+BOOST_TREE_TWEET_PAIR_TRIAL_DIR = os.path.join(DATA_DIR, 'tree_trial/')
 BOOST_TREE_TWEET_PAIR_EVAL_DIR = os.path.join(DATA_DIR, 'tree_eval_data/')
+
 BOOST_TREE_TRAIN_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'boost_tree_train_tweet_pair_predictions.cpkl')
+BOOST_TREE_TRIAL_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'boost_tree_trial_tweet_pair_predictions.cpkl')
+BOOST_TREE_EVAL_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'boost_tree_eval_tweet_pair_predictions.cpkl')
+
+BOOST_TREE_MODEL_FILE_PATH = os.path.join(DATA_DIR, 'boost_tree_model.bin')
+
 
 # PARAMETERS
 HUMOR_MAX_WORDS_IN_TWEET = 20  # All winning tweets are under 30 words long
@@ -84,3 +92,4 @@ PHONETIC_EMB_SIZE = 200
 MONGO_ADDRESS = '127.0.0.1:27018'
 
 ENSEMBLE_DIR = os.path.join(DATA_DIR, 'ensemble/')
+ENSEMBLE_EVAL_PREDICTIONS_DIR = os.path.join(DATA_DIR, 'ensemble_predictions/')

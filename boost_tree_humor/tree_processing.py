@@ -12,7 +12,8 @@ from tools import get_hashtag_file_names, extract_tweet_pairs_by_combination
 from tools import load_tweets_from_hashtag
 from tools import extract_tweet_pairs_by_rank
 from tools import remove_hashtag_from_tweets
-from config import SEMEVAL_HUMOR_TRAIN_DIR, HUMOR_WORD_TO_GLOVE_FILE_PATH, SEMEVAL_HUMOR_EVAL_DIR
+from config import SEMEVAL_HUMOR_TRAIN_DIR, HUMOR_WORD_TO_GLOVE_FILE_PATH, SEMEVAL_HUMOR_EVAL_DIR, \
+    BOOST_TREE_TWEET_PAIR_TRIAL_DIR
 from config import TWEET_PAIR_LABEL_RANDOM_SEED
 from config import BOOST_TREE_TWEET_PAIR_TRAIN_DIR
 from config import BOOST_TREE_TWEET_PAIR_EVAL_DIR
@@ -37,12 +38,15 @@ from config import SEMEVAL_HUMOR_TRIAL_DIR
 def main():
     if not os.path.exists(BOOST_TREE_TWEET_PAIR_TRAIN_DIR):
         os.makedirs(BOOST_TREE_TWEET_PAIR_TRAIN_DIR)
+    if not os.path.exists(BOOST_TREE_TWEET_PAIR_TRIAL_DIR):
+        os.makedirs(BOOST_TREE_TWEET_PAIR_TRIAL_DIR)
     if not os.path.exists(BOOST_TREE_TWEET_PAIR_EVAL_DIR):
         os.makedirs(BOOST_TREE_TWEET_PAIR_EVAL_DIR)
 
     print 'Starting program'
 
     generate_tree_model_input_data_from_dir(SEMEVAL_HUMOR_TRAIN_DIR, BOOST_TREE_TWEET_PAIR_TRAIN_DIR)
+    generate_tree_model_input_data_from_dir(SEMEVAL_HUMOR_TRIAL_DIR, BOOST_TREE_TWEET_PAIR_TRIAL_DIR)
     generate_tree_model_input_data_from_dir(SEMEVAL_HUMOR_EVAL_DIR, BOOST_TREE_TWEET_PAIR_EVAL_DIR)
 
 
