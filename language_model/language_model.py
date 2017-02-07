@@ -12,7 +12,6 @@ class LanguageModel:
         from file.
 
         n - size of gram to use as context to target word"""
-        print 'Created language model'
         self.n_gram_to_word_count = {}
         self.n = n
 
@@ -25,7 +24,6 @@ class LanguageModel:
 
         - lines_of_text - a list of strings, each string is a line of text to use
         for the model"""
-        print 'Created model from lines of text'
         assert isinstance(lines_of_text, list)
         assert len(lines_of_text) > 0
         # Run through all lines of text
@@ -70,7 +68,6 @@ class LanguageModel:
         context - a dictionary where keys are words and values are counts"""
         context = context.lower()
         context_split = nltk.word_tokenize(context)
-        print context, context_split
         # Only include last N tokens in context
         if len(context_split) > self.n:
             context_split = context_split[len(context_split) - self.n:]
@@ -91,7 +88,8 @@ class LanguageModelTest(unittest2.TestCase):
                               "She went to the park",
                               "We jumped across the park",
                               "I didn't take a bus",
-                              "We took a train"]
+                              "We took a long train",
+                              "He took a long bus"]
 
     def test_language_model_creation(self):
         """Assume an uninitialized language model is empty."""
@@ -164,3 +162,11 @@ class LanguageModelTest(unittest2.TestCase):
         word_counts_dict3 = self.lm.calculate_expected_next_word("I didn't")
         self.assertTrue(word_counts_dict3 is not None)
         self.assertTrue('take' in word_counts_dict3)
+
+    def test_show_model_works_for_quadgram(self):
+        lm_4 = LanguageModel(4)
+        lm_4.initialize_model_from_text(self.lines_of_text)
+        print lm_4.n_gram_to_word_count
+        word_counts_dict = lm_4.calculate_expected_next_word('he took a long')
+        self.assertTrue(word_counts_dict is not None)
+        self.assertTrue('train' not in word_counts_dict.keys())
