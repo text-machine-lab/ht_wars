@@ -2,13 +2,34 @@
 from tools import expected_value
 from tools import find_indices_larger_than_threshold
 from tools import format_text_for_embedding_model
+import tools
+from language_model import LanguageModel
 import numpy as np
 
 
 def main():
+    test_compute_glove_expectation()
     test_expected_value()
     test_find_indices_of_largest_n_values()
     test_format_text_with_hashtag()
+
+
+def test_compute_glove_expectation():
+    word_to_glove = {'green': [1, 2, 3, 4],
+                     'eggs': [.3, .5, .8, 1.2],
+                     'ham': [3.4, 1.2, .3, .9]}
+    text = ['green eggs ham',
+            'eggs ham green',
+            'ham eggs green',
+            'ham green eggs']
+    lm = LanguageModel(2)
+    lm.initialize_model_from_text(text)
+    test_text = ['I love green eggs ham',
+                 'I do not like ham eggs together',
+                 'Hinger dinger']
+    for tweet in test_text:
+        glove_expectations = tools.compute_glove_expectation(tweet, lm, word_to_glove, 4)
+        print glove_expectations
 
 
 def test_format_text_with_hashtag():

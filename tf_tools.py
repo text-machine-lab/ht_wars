@@ -115,9 +115,9 @@ def create_embedding_model(lstm_hidden_dim=None):
     # Create placeholders
     tf_batch_size = tf.placeholder(tf.int32, name='batch_size')
     tf_dropout_rate = tf.placeholder(tf.float32, name='dropout_rate')
-    word_embedding_size = GLOVE_EMB_SIZE + PHONETIC_EMB_SIZE
+    word_embedding_size = GLOVE_EMB_SIZE * 2 + PHONETIC_EMB_SIZE
     if lstm_hidden_dim is None:
-        lstm_hidden_dim = word_embedding_size * 2
+        lstm_hidden_dim = int(word_embedding_size * 1.5)
     tf_first_input_tweets = tf.placeholder(dtype=tf.float32,
                                            shape=[None, HUMOR_MAX_WORDS_IN_TWEET * word_embedding_size],
                                            name='first_tweets')

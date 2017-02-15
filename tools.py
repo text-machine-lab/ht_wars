@@ -157,18 +157,24 @@ def format_tweet_pairs(data, char_to_index, max_tweet_size=140):
     return np_tweet_pairs, np_tweet_pair_labels
 
 
-def convert_tweet_to_embeddings(tweets, word_to_glove, word_to_phonetic, max_number_of_words, glove_size, phonetic_emb_size):
-    """Pack GloVe vectors and phonetic embeddings side by side for each word in each tweet as a numpy array.
+def convert_tweet_to_embeddings(tweets, word_to_glove, word_to_phonetic, max_number_of_words, glove_size, phonetic_emb_size, lm):
+    """Pack GloVe vectors and phonetic embeddings side by side for each word in each tweet as a numpy array. New: Add
+    GloVe expectation feature!
 
     tweets - list of tweet strings
     word_to_glove - dictionary mapping from words to their glove vectors
     word_to_phonetic - dictionary mapping from words to their phonetic embeddings
     max_number_of_words - leave padding to fit all tweets in same space
     glove_size - size of glove vectors used
-    phonetic_emb_size - size of phonetic embeddings used"""
-    word_embedding_size = glove_size + phonetic_emb_size
+    phonetic_emb_size - size of phonetic embeddings used
+    lm - trained language model"""
+    word_embedding_size = glove_size * 2 + phonetic_emb_size  # Make room for GloVe expectation!
     np_tweet_embs = np.zeros([len(tweets), max_number_of_words * word_embedding_size])
+    # Calculate GloVe expectation, then calculate actual GloVe and phonetic embeddings.
+    # Insert embeddings into feature vector.
     for i in range(len(tweets)):
+        np_glove_expectation = compute_glove_expectation(tweets[i], lm, word_to_glove, GLOVE_EMB_SIZE)
+
         tokens = tweets[i].split()
         for j in range(len(tokens)):
             if j < max_number_of_words:
@@ -176,21 +182,26 @@ def convert_tweet_to_embeddings(tweets, word_to_glove, word_to_phonetic, max_num
                     np_token_glove = np.array(word_to_glove[tokens[j]])
                     for k in range(glove_size):
                         np_tweet_embs[i, j*word_embedding_size + k] = np_token_glove[k]
+
                 if tokens[j] in word_to_phonetic:
                     np_token_phonetic = np.array(word_to_phonetic[tokens[j]])
                     for k in range(phonetic_emb_size):
                         np_tweet_embs[i, j*word_embedding_size + glove_size + k] = np_token_phonetic[k]
 
+                np_tweet_embs[i, j * word_embedding_size + glove_size + phonetic_emb_size:
+                j * word_embedding_size + glove_size * 2 + phonetic_emb_size] = np_glove_expectation[j]
+
     return np_tweet_embs
 
 
-def convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name, word_to_glove, word_to_phonetic):
+def convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name, word_to_glove, word_to_phonetic, lm):
     """Load a tweets from a hashtag by its directory and name. Convert tweets to tweet pairs and return.
 
     tweet_input_dir - location of tweet .tsv file
     hashtag_name - name of hashtag file without .tsv extension
     word_to_glove - dictionary mapping from words to glove vectors
     word_to_phonetic - dictionary mapping from words to phonetic embeddings
+    lm - language model used to create GloVe expectation
     Returns:
     np_tweet1_gloves - numpy array of glove/phonetic vectors for all first tweets
     np_tweet2_gloves - numpy array of glove/phonetic vectors for all second tweets
@@ -215,13 +226,32 @@ def convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name, word
         labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
         np_label = np.array(labels)
     np_hashtag_gloves_col = convert_tweet_to_embeddings([formatted_hashtag_name], word_to_glove, word_to_phonetic,
-                                                        HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
+                                                        HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE, lm)
     np_hashtag_gloves = np.repeat(np_hashtag_gloves_col, len(tweet1), axis=0)
     np_tweet1_gloves = convert_tweet_to_embeddings(tweet1, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET,
-                                                   GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
+                                                   GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE, lm)
     np_tweet2_gloves = convert_tweet_to_embeddings(tweet2, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET,
-                                                   GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
+                                                   GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE, lm)
     return np_tweet1_gloves, np_tweet2_gloves, tweet1_id, tweet2_id, np_label, np_hashtag_gloves
+
+
+def compute_glove_expectation(tweet, lm, word_to_glove, glove_emb_size):
+    glove_expectations = []
+    tweet_tokens = tweet.split()
+    for i in range(len(tweet_tokens)):
+        next_word_dict = lm.calculate_expected_next_word(' '.join(tweet_tokens[:i]))
+        glove_expectation = np.zeros(glove_emb_size)
+        num_gloves_summed = 0
+        if next_word_dict is not None:
+            for word in next_word_dict:
+                if word in word_to_glove:
+                    num_gloves_summed += next_word_dict[word]
+                    glove_expectation += np.multiply(np.array(word_to_glove[word]), next_word_dict[word])
+        if num_gloves_summed == 0:
+            glove_expectations.append(glove_expectation)
+        elif num_gloves_summed > 0:
+            glove_expectations.append(np.divide(glove_expectation, num_gloves_summed))
+    return glove_expectations
 
 
 def extract_tweet_pair_from_hashtag_datas(hashtag_datas, hashtag_name, tweet_size=TWEET_SIZE):

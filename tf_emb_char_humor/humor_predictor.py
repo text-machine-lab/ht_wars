@@ -4,6 +4,8 @@ import cPickle as pickle
 import random
 import tensorflow as tf
 import numpy as np
+import config
+from language_model import LanguageModel
 from config import HUMOR_INDEX_TO_WORD_FILE_PATH
 from config import HUMOR_WORD_TO_GLOVE_FILE_PATH
 from config import HUMOR_WORD_TO_PHONETIC_FILE_PATH
@@ -26,7 +28,7 @@ class HumorPredictor:
     model_var_dir - location of model variables corresponding to current model build
     use_emb_model - true if model will use embeddings to make predictions
     use_char_model - true if model will use individual chars to make predictions"""
-    def __init__(self, model_var_dir, use_emb_model=True, use_char_model=True, scope=None, v=True, sess=None):
+    def __init__(self, model_var_dir, use_emb_model=True, use_char_model=True, scope=None, v=True, sess=None, N=2):
         print use_emb_model
         print use_char_model
         self.model_var_dir = model_var_dir
@@ -50,6 +52,8 @@ class HumorPredictor:
         self.char_to_index = pickle.load(open(HUMOR_CHAR_TO_INDEX_FILE_PATH, 'rb'))
         if v:
             print 'len char_to_index: %s' % len(self.char_to_index)
+        self.lm = LanguageModel(N)
+        self.lm.initialize_model_from_file(config.LANGUAGE_MODEL_FILE)
 
         [self.tf_first_input_tweets, self.tf_second_input_tweets, self.tf_output, tf_tweet_humor_rating,
          self.tf_batch_size, tf_hashtag, self.tf_output_prob, self.tf_dropout_rate, self.tf_tweet1, self.tf_tweet2] \
@@ -64,7 +68,7 @@ class HumorPredictor:
         hashtag_name - name of hashtag file without .tsv extension"""
         np_first_tweets, np_second_tweets, first_tweet_ids, second_tweet_ids, np_labels, np_hashtag_gloves = \
             convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name,
-                                                     self.word_to_glove, self.word_to_phonetic)
+                                                     self.word_to_glove, self.word_to_phonetic, self.lm)
         random.seed(TWEET_PAIR_LABEL_RANDOM_SEED + hashtag_name)
         data = extract_tweet_pairs_from_file(tweet_input_dir + hashtag_name + '.tsv')
         np_tweet_pairs, np_tweet_pair_labels = format_tweet_pairs(data, self.char_to_index)

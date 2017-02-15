@@ -5,6 +5,7 @@ pairs in the hashtag. It will generate pronunciation embeddings for all tweet pa
 For each hashtag, it will generate and save a numpy array for each tweet. The numpy array will
 be shaped m x n x e where m is the number of tweet pairs in the hashtag, n is the max tweet size and
 e is the concatenated size of both the phonetic and glove embeddings."""
+import nltk
 from tools import get_hashtag_file_names
 from tools import convert_hashtag_to_embedding_tweet_pairs
 from config import SEMEVAL_HUMOR_TRAIN_DIR, HUMOR_MAX_WORDS_IN_TWEET, HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_EMB_SIZE, \
@@ -19,17 +20,20 @@ from config import HUMOR_MAX_WORDS_IN_TWEET
 from config import HUMOR_MAX_WORDS_IN_HASHTAG
 from config import GLOVE_EMB_SIZE
 from config import PHONETIC_EMB_SIZE
+import config
 from tools import load_tweets_from_hashtag
 from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
 from config import HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR
 from config import CMU_CHAR_TO_INDEX_FILE_PATH
 from config import CMU_PHONE_TO_INDEX_FILE_PATH
+from config import TWITTER_CORPUS
 from tf_tools import generate_phonetic_embs_from_words
 import os
 import sys
 import cPickle as pickle
 import numpy as np
 import random
+from language_model import LanguageModel
 
 
 def main():
@@ -47,13 +51,14 @@ def main():
             and all right tweets into glove embeddings per word. Save numpy array for left tweets,
             right tweets, and labels. Do this for both training and trial datasets, and save both."""
             print 'Creating tweet pairs (may take a while)'
-            convert_all_tweets_to_tweet_pairs_represented_by_glove_and_phonetic_embeddings()
+            convert_all_tweets_to_tweet_pairs_represented_by_glove_phonetic_expectation_embeddings()
 
 
-def convert_all_tweets_to_tweet_pairs_represented_by_glove_and_phonetic_embeddings():
+def convert_all_tweets_to_tweet_pairs_represented_by_glove_phonetic_expectation_embeddings():
     vocabulary = pickle.load(open(HUMOR_INDEX_TO_WORD_FILE_PATH, 'rb'))
     word_to_glove = pickle.load(open(HUMOR_WORD_TO_GLOVE_FILE_PATH, 'rb'))
     word_to_phonetic = pickle.load(open(HUMOR_WORD_TO_PHONETIC_FILE_PATH, 'rb'))
+
     convert_tweets_to_embedding_tweet_pairs(word_to_glove,
                                             word_to_phonetic,
                                             SEMEVAL_HUMOR_TRAIN_DIR,
@@ -62,6 +67,75 @@ def convert_all_tweets_to_tweet_pairs_represented_by_glove_and_phonetic_embeddin
                                             word_to_phonetic,
                                             SEMEVAL_HUMOR_TRIAL_DIR,
                                             HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR)
+
+
+def create_language_model_from_twitter_corpus(tweet_corpus, vocabulary, max_lines=None):
+    """Import files in twitter corpus file"""
+    tweets = []
+    with open(tweet_corpus, 'rb') as f:
+        lines_read = 0
+        for line in f:
+            if max_lines is not None:
+                if lines_read >= max_lines:
+                    break
+            line_wo_quotes = line.decode('utf-8').replace('"', '')
+            line_nltk = ' '.join(nltk.word_tokenize(line_wo_quotes))
+            tweets.append(line_nltk)
+            lines_read += 1
+    tweets_formatted = remove_all_weird_symbols_and_at_mentions(tweets)
+    tweets_formatted_pruned = remove_words_and_lines_not_in_vocabulary(tweets_formatted, vocabulary, missing_vocab_discard_fraction=.8)
+
+    lm = LanguageModel(2)
+    lm.initialize_model_from_text(tweets_formatted_pruned)
+
+    return lm
+
+
+def remove_words_and_lines_not_in_vocabulary(tweets, vocabulary, missing_vocab_discard_fraction=.5):
+    """Removes words that don't appear in vocabulary from tweets. Remove lines that have a great enough
+    fraction of out of vocabulary words."""
+    tweets_in_vocab = []
+    for tweet in tweets:
+        tweet_tokens = tweet.lower().split()
+        tweet_tokens_in_vocab = []
+        for token in tweet_tokens:
+            if token in vocabulary:
+                tweet_tokens_in_vocab.append(token)
+        if len(tweet_tokens_in_vocab) >= len(tweet_tokens) * missing_vocab_discard_fraction:
+            tweet_in_vocab = ' '.join(tweet_tokens_in_vocab)
+            tweets_in_vocab.append(tweet_in_vocab)
+    return tweets_in_vocab
+
+
+def remove_all_weird_symbols_and_at_mentions(tweets):
+    """Remove all characters that aren't alpha-numeric or #.
+    Remove @username mentions. Split up hashtags."""
+    tweets_formatted = []
+    for tweet in tweets:
+        tweet_formatted = []
+        inside_hashtag = False
+        in_mention = False
+        for char in tweet:
+            if char == '#':
+                inside_hashtag = True
+            if char == ' ':
+                inside_hashtag = False
+            if inside_hashtag:
+                if char.isupper():
+                    tweet_formatted += ' '
+                if not char.isalpha():
+                    tweet_formatted += ' '
+            if char == '@':
+                in_mention = True
+            if in_mention is True and char == ' ':
+                in_mention = False
+            if not in_mention:
+                if char.isalpha() or char.isdigit() or char == ' ':
+                    tweet_formatted += char
+        tweet_formatted = ''.join(tweet_formatted)
+        tweet_formatted = ' '.join(tweet_formatted.split()).lower()
+        tweets_formatted.append(''.join(tweet_formatted))
+    return tweets_formatted
 
 
 def create_vocabulary_and_glove_phonetic_mappings():
@@ -80,6 +154,9 @@ def create_vocabulary_and_glove_phonetic_mappings():
         tweets, labels, tweet_ids = load_tweets_from_hashtag(SEMEVAL_HUMOR_TRIAL_DIR + hashtag_name + '.tsv')
         vocabulary = build_vocabulary(tweets, vocabulary=vocabulary)
 
+    print 'Creating language model'
+    lm = create_language_model_from_twitter_corpus(TWITTER_CORPUS, vocabulary, max_lines=None)
+    print 'Creating GloVe and phonetic embedding dictionaries'
     word_to_glove = look_up_glove_embeddings(vocabulary)
     index_to_phonetic = generate_phonetic_embs_from_words(vocabulary, CMU_CHAR_TO_INDEX_FILE_PATH,
                                                           CMU_PHONE_TO_INDEX_FILE_PATH)
@@ -94,6 +171,8 @@ def create_vocabulary_and_glove_phonetic_mappings():
     pickle.dump(word_to_glove, open(HUMOR_WORD_TO_GLOVE_FILE_PATH, 'wb'))
     print 'Saving %s' % HUMOR_WORD_TO_PHONETIC_FILE_PATH
     pickle.dump(word_to_phonetic, open(HUMOR_WORD_TO_PHONETIC_FILE_PATH, 'wb'))
+
+    lm.save_model_to_file(config.LANGUAGE_MODEL_FILE)
 
 
 def create_dictionary_mapping(first_list, second_list):
@@ -126,10 +205,13 @@ def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, twe
     if hashtag_names is None:
         hashtag_names = get_hashtag_file_names(tweet_input_dir)
 
+    lm = LanguageModel(2)
+    lm.initialize_model_from_file(config.LANGUAGE_MODEL_FILE)
+
     for hashtag_name in hashtag_names:
         print 'Loading hashtag: %s' % hashtag_name
         np_tweet1_gloves, np_tweet2_gloves, tweet1_id, tweet2_id, np_label, np_hashtag_gloves = \
-            convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name, word_to_glove, word_to_phonetic)
+            convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name, word_to_glove, word_to_phonetic, lm)
         # Save
         print 'Saving embedding vector tweet pairs with labels'
         np.save(open(tweet_pair_output_dir + hashtag_name + '_label.npy', 'wb'), np_label)

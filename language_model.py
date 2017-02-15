@@ -1,6 +1,7 @@
 """David Donahue 2017. n-gram language model created from Twitter data. Planned to be used
 to calculate an expected GloVe embedding for the next word in a sequence."""
 import unittest2
+import cPickle as pkl
 import nltk
 
 
@@ -38,6 +39,12 @@ class LanguageModel:
                     self.n_gram_to_word_count[context][word] = 0
 
                 self.n_gram_to_word_count[context][word] += 1
+
+    def save_model_to_file(self, filename):
+        pkl.dump(self.n_gram_to_word_count, open(filename, 'wb'))
+
+    def initialize_model_from_file(self, filename):
+        self.n_gram_to_word_count = pkl.load(open(filename, 'rb'))
 
     def extract_word_and_context(self, line, word_index):
         """Helper function to extract a target word and a context
@@ -170,3 +177,10 @@ class LanguageModelTest(unittest2.TestCase):
         word_counts_dict = lm_4.calculate_expected_next_word('he took a long')
         self.assertTrue(word_counts_dict is not None)
         self.assertTrue('train' not in word_counts_dict.keys())
+
+    def test_save_model_to_file(self):
+        self.lm.initialize_model_from_text(self.lines_of_text)
+        self.lm.save_model_to_file('tmp.lm')
+        lm_from_file = LanguageModel(3)
+        lm_from_file.initialize_model_from_file('tmp.lm')
+        self.assertEqual(self.lm.n_gram_to_word_count, lm_from_file.n_gram_to_word_count)

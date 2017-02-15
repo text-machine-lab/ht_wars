@@ -80,6 +80,9 @@ BOOST_TREE_EVAL_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'boost_tree_eval
 
 BOOST_TREE_MODEL_FILE_PATH = os.path.join(DATA_DIR, 'boost_tree_model.bin')
 
+TWITTER_CORPUS = os.path.join(DATA_DIR, 'tweet_corpus/london.txt')
+LANGUAGE_MODEL_FILE = os.path.join(DATA_DIR, 'lm.dict')
+
 
 # PARAMETERS
 HUMOR_MAX_WORDS_IN_TWEET = 20  # All winning tweets are under 30 words long

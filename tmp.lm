@@ -1,0 +1,152 @@
+(dp1
+S''
+(dp2
+S'i'
+I4
+sS'we'
+p3
+I2
+sS'she'
+p4
+I1
+sS'he'
+p5
+I1
+ssS'we jumped'
+p6
+(dp7
+S'across'
+p8
+I1
+ssS"i did n't"
+p9
+(dp10
+S'take'
+p11
+I1
+ssS'jumped across the'
+p12
+(dp13
+S'park'
+p14
+I1
+ssS'she went'
+p15
+(dp16
+S'to'
+p17
+I1
+ssS'she went to'
+p18
+(dp19
+S'the'
+p20
+I1
+ssS'we took'
+p21
+(dp22
+S'a'
+I1
+ssS'took a long'
+p23
+(dp24
+S'bus'
+p25
+I1
+sS'train'
+p26
+I1
+ssS"n't take a"
+p27
+(dp28
+S'bus'
+p29
+I1
+ssS'i went to'
+p30
+(dp31
+S'the'
+p32
+I3
+ssS'we'
+p33
+(dp34
+S'jumped'
+p35
+I1
+sS'took'
+p36
+I1
+ssS'i did'
+p37
+(dp38
+S"n't"
+p39
+I1
+ssS'went to the'
+p40
+(dp41
+S'museum'
+p42
+I1
+sS'park'
+p43
+I2
+sS'dentist'
+p44
+I1
+ssS'he took'
+p45
+(dp46
+S'a'
+I1
+ssS'he'
+p47
+(dp48
+S'took'
+p49
+I1
+ssS'he took a'
+p50
+(dp51
+S'long'
+p52
+I1
+ssS'we jumped across'
+p53
+(dp54
+S'the'
+p55
+I1
+ssS'i'
+(dp56
+S'did'
+p57
+I1
+sS'went'
+p58
+I3
+ssS"did n't take"
+p59
+(dp60
+S'a'
+I1
+ssS'i went'
+p61
+(dp62
+S'to'
+p63
+I3
+ssS'she'
+p64
+(dp65
+S'went'
+p66
+I1
+ssS'we took a'
+p67
+(dp68
+S'long'
+p69
+I1
+ss.

@@ -10,8 +10,8 @@ from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
 from config import HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
 from config import SEMEVAL_HUMOR_TRAIN_DIR
 from config import TWEET_PAIR_LABEL_RANDOM_SEED
+import humor_processing as hp
 from humor_processing import build_vocabulary
-from humor_processing import convert_tweet_to_embeddings
 from humor_processing import create_dictionary_mapping
 from humor_processing import look_up_glove_embeddings
 from config import GLOVE_EMB_SIZE
@@ -24,6 +24,8 @@ from tools import extract_tweet_pairs_by_rank
 
 
 def main():
+    test_remove_words_and_lines_not_in_vocabulary()
+    test_remove_all_weird_symbols_and_at_mentions()
     test_embedding_character_labels_match()
     test_print_words_without_gloves()
     test_build_vocabulary()
@@ -35,6 +37,35 @@ def main():
     test_extract_tweet_pairs()
 
     print 'Tests successful'
+
+
+def test_remove_words_and_lines_not_in_vocabulary():
+    vocabulary = ['green', 'eggs', 'ham']
+    tweets = ['I went to the beach',
+              'I ate green eggs and ham',
+              'I no ate green eggs and ham',
+              '',
+              'HAM ham HAM']
+    tweets_in_vocab = hp.remove_words_and_lines_not_in_vocabulary(tweets, vocabulary)
+    print tweets_in_vocab
+    assert tweets_in_vocab[0] == 'green eggs ham'
+    assert tweets_in_vocab[1] == ''
+    assert tweets_in_vocab[2] == 'ham ham ham'
+
+
+def test_remove_all_weird_symbols_and_at_mentions():
+    some_tweets = ['@david That concert was #awesome',
+                   'Split this #HashtagApart',
+                   '@person @otherperson #labels @person3',
+                   'just some normal text',
+                   '']
+    some_formatted_tweets = hp.remove_all_weird_symbols_and_at_mentions(some_tweets)
+    print some_formatted_tweets
+    assert some_formatted_tweets[0] == 'that concert was awesome'
+    assert some_formatted_tweets[1] == 'split this hashtag apart'
+    assert some_formatted_tweets[2] == 'labels'
+    assert some_formatted_tweets[3] == 'just some normal text'
+    assert some_formatted_tweets[4] == ''
 
 
 def test_embedding_character_labels_match():
@@ -73,8 +104,6 @@ def test_extract_tweet_pairs():
     assert tweet2 == copy_tweet2
     assert tweet2_id == copy_tweet2_id
     assert labels == copy_labels
-
-
 
 
 def test_print_words_without_gloves():
