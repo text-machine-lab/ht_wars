@@ -16,7 +16,7 @@ class LanguageModel:
         self.n_gram_to_word_count = {}
         self.n = n
 
-    def initialize_model_from_text(self, lines_of_text):
+    def initialize_model_from_text(self, lines_of_text, print_every_n_lines=None):
         """Constructs an internal dictionary from the text, such
         that keys are n-grams and values are dictionaries of target words.
         So for a given sequence of words, the dictionary represents words
@@ -28,7 +28,12 @@ class LanguageModel:
         assert isinstance(lines_of_text, list)
         assert len(lines_of_text) > 0
         # Run through all lines of text
+        if print_every_n_lines is not None:
+            print 'Will print lines processed'
         for line_index in range(len(lines_of_text)):
+            if print_every_n_lines is not None:
+                if line_index % print_every_n_lines == 0:
+                    print 'LanguageModel: Processed %s lines' % line_index
             line = lines_of_text[line_index]
             line_split = nltk.word_tokenize(line)
             for word_index in range(len(line_split)):

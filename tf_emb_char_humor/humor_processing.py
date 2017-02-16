@@ -6,6 +6,7 @@ For each hashtag, it will generate and save a numpy array for each tweet. The nu
 be shaped m x n x e where m is the number of tweet pairs in the hashtag, n is the max tweet size and
 e is the concatenated size of both the phonetic and glove embeddings."""
 import nltk
+import tools
 from tools import get_hashtag_file_names
 from tools import convert_hashtag_to_embedding_tweet_pairs
 from config import SEMEVAL_HUMOR_TRAIN_DIR, HUMOR_MAX_WORDS_IN_TWEET, HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_EMB_SIZE, \
@@ -69,12 +70,15 @@ def convert_all_tweets_to_tweet_pairs_represented_by_glove_phonetic_expectation_
                                             HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR)
 
 
-def create_language_model_from_twitter_corpus(tweet_corpus, vocabulary, max_lines=None):
+def create_language_model_from_twitter_corpus(tweet_corpus, vocabulary, max_lines=None, print_n_lines=None):
     """Import files in twitter corpus file"""
     tweets = []
     with open(tweet_corpus, 'rb') as f:
         lines_read = 0
         for line in f:
+            if print_n_lines is not None:
+                if lines_read % print_n_lines == 0:
+                    print 'Read %s lines' % lines_read
             if max_lines is not None:
                 if lines_read >= max_lines:
                     break
@@ -82,18 +86,21 @@ def create_language_model_from_twitter_corpus(tweet_corpus, vocabulary, max_line
             line_nltk = ' '.join(nltk.word_tokenize(line_wo_quotes))
             tweets.append(line_nltk)
             lines_read += 1
+    print 'Removing weird symbols, hashtags and @ mentions'
     tweets_formatted = remove_all_weird_symbols_and_at_mentions(tweets)
+    print 'Removing out-of-vocabulary words and lines'
     tweets_formatted_pruned = remove_words_and_lines_not_in_vocabulary(tweets_formatted, vocabulary, missing_vocab_discard_fraction=.8)
-
+    print 'Creating language model'
     lm = LanguageModel(2)
-    lm.initialize_model_from_text(tweets_formatted_pruned)
+    lm.initialize_model_from_text(tweets_formatted_pruned, print_every_n_lines=10000)
 
     return lm
 
 
-def remove_words_and_lines_not_in_vocabulary(tweets, vocabulary, missing_vocab_discard_fraction=.5):
+def remove_words_and_lines_not_in_vocabulary(tweets, vocabulary_list, missing_vocab_discard_fraction=.5):
     """Removes words that don't appear in vocabulary from tweets. Remove lines that have a great enough
     fraction of out of vocabulary words."""
+    vocabulary = {vocabulary_list[index]:index for index in len(vocabulary_list)}
     tweets_in_vocab = []
     for tweet in tweets:
         tweet_tokens = tweet.lower().split()
@@ -155,7 +162,7 @@ def create_vocabulary_and_glove_phonetic_mappings():
         vocabulary = build_vocabulary(tweets, vocabulary=vocabulary)
 
     print 'Creating language model'
-    lm = create_language_model_from_twitter_corpus(TWITTER_CORPUS, vocabulary, max_lines=None)
+    lm = create_language_model_from_twitter_corpus(TWITTER_CORPUS, vocabulary, max_lines=100000, print_n_lines=100000)
     print 'Creating GloVe and phonetic embedding dictionaries'
     word_to_glove = look_up_glove_embeddings(vocabulary)
     index_to_phonetic = generate_phonetic_embs_from_words(vocabulary, CMU_CHAR_TO_INDEX_FILE_PATH,
