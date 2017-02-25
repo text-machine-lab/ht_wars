@@ -11,7 +11,7 @@ from config import HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
 from config import SEMEVAL_HUMOR_TRAIN_DIR
 from config import TWEET_PAIR_LABEL_RANDOM_SEED
 from humor_processing import build_vocabulary
-from humor_processing import convert_tweet_to_embeddings
+from tools import convert_tweet_to_embeddings
 from humor_processing import create_dictionary_mapping
 from humor_processing import look_up_glove_embeddings
 from config import GLOVE_EMB_SIZE
@@ -144,9 +144,6 @@ def test_saved_files():
 
     word_emb_size = GLOVE_EMB_SIZE + PHONETIC_EMB_SIZE
 
-    # Print out hashtag from embeddings
-    glove_reconstructed_hashtag, phone_reconstructed_hashtag = reconstruct_text_from_gloves(np_hashtag, HUMOR_MAX_WORDS_IN_HASHTAG,
-                                                         word_emb_size, word_to_glove, word_to_phone)
     num_tweets_to_reconstruct = 0
     for i in range(num_tweets_to_reconstruct):
         glove_reconstructed_first_tweet, phone_reconstructed_first_tweet = \
@@ -154,9 +151,6 @@ def test_saved_files():
                                          word_emb_size, word_to_glove,
                                          word_to_phone, tweet_index=i)
         print glove_reconstructed_first_tweet + ' | ' + phone_reconstructed_first_tweet
-
-    print glove_reconstructed_hashtag
-    assert glove_reconstructed_hashtag == 'bad monster movies _ _ _ _ _'
 
 
 def reconstruct_text_from_gloves(np_text, max_len_text, word_emb_size, word_to_glove, word_to_phone, tweet_index=0):

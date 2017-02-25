@@ -126,6 +126,8 @@ def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, twe
     if hashtag_names is None:
         hashtag_names = get_hashtag_file_names(tweet_input_dir)
 
+    print hashtag_names
+
     for hashtag_name in hashtag_names:
         print 'Loading hashtag: %s' % hashtag_name
         np_tweet1_gloves, np_tweet2_gloves, tweet1_id, tweet2_id, np_label, np_hashtag_gloves = \
@@ -134,8 +136,7 @@ def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, twe
         print 'Saving embedding vector tweet pairs with labels'
         np.save(open(tweet_pair_output_dir + hashtag_name + '_label.npy', 'wb'), np_label)
         np.save(open(tweet_pair_output_dir + hashtag_name + '_hashtag.npy', 'wb'), np_hashtag_gloves)
-        np.save(open(tweet_pair_output_dir + hashtag_name + '_first_tweet_glove.npy', 'wb'),
-                np_tweet1_gloves)
+        np.save(open(tweet_pair_output_dir + hashtag_name + '_first_tweet_glove.npy', 'wb'), np_tweet1_gloves)
         pickle.dump(tweet1_id, open(tweet_pair_output_dir + hashtag_name + '_first_tweet_ids.cpkl', 'wb'))
         np.save(open(tweet_pair_output_dir + hashtag_name + '_second_tweet_glove.npy', 'wb'),
                 np_tweet2_gloves)

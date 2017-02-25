@@ -2,6 +2,8 @@
 separates functions that do import tensorflow from those that don't."""
 import tensorflow as tf
 import numpy as np
+import random
+import string
 import cPickle as pickle
 from keras.layers import Convolution1D, MaxPooling1D
 from keras.layers import Input, Dense, Flatten, Embedding
@@ -69,22 +71,22 @@ def build_humor_model(vocab_size, use_embedding_model=True, use_character_model=
     will construct a convolutional character-based model. It groups the output of both these models by concatenation,
     and then makes a prediction of which tweet is funnier using three fully-connected layers."""
     print 'Building embedding humor model'
-
-    tf_batch_size, tf_dropout_rate, tf_first_input_tweets, \
-    tf_first_tweet_encoder_output, tf_hashtag, \
-    tf_second_input_tweets, tf_second_tweet_encoder_output = create_embedding_model(lstm_hidden_dim=hidden_dim_size)
-
-    # Create character model to feed into dense layers
-    tweet1_conv_emb, tweet2_conv_emb, tf_tweet1, tf_tweet2 = create_character_model(TWEET_SIZE, vocab_size)
-
-    # Concatenate encoders and process with dense layers
     dense_features = []
+
+    tf_batch_size = tf.placeholder(tf.int32, name='batch_size')
+    tf_dropout_rate = tf.placeholder(tf.float32, name='dropout_rate')
+
+    tf_first_input_tweets, tf_first_tweet_encoder_output, tf_hashtag, tf_second_input_tweets, tf_second_tweet_encoder_output\
+        = create_embedding_model(tf_batch_size, tf_dropout_rate, lstm_hidden_dim=hidden_dim_size)
     if use_embedding_model:
         dense_features.append(tf_first_tweet_encoder_output)
         dense_features.append(tf_second_tweet_encoder_output)
+
+    tweet1_conv_emb, tweet2_conv_emb, tf_tweet1, tf_tweet2 = create_character_model(TWEET_SIZE, vocab_size)
     if use_character_model:
         dense_features.append(tweet1_conv_emb)
         dense_features.append(tweet2_conv_emb)
+
     tf_tweet_pair_emb = tf.concat(1, dense_features)
     tweet_pair_emb_size = int(tf_tweet_pair_emb.get_shape()[1])
     tf_tweet_pair_emb_dropout = tf.nn.dropout(tf_tweet_pair_emb, keep_prob=tf_dropout_rate)
@@ -110,11 +112,9 @@ def build_humor_model(vocab_size, use_embedding_model=True, use_character_model=
             output_prob, tf_dropout_rate, tf_tweet1, tf_tweet2]  # Model vars
 
 
-def create_embedding_model(lstm_hidden_dim=None):
+def create_embedding_model(tf_batch_size, tf_dropout_rate, lstm_hidden_dim=None):
     """Applies dropout to and feeds two tweets in separate tweet encoders(shared weights)."""
     # Create placeholders
-    tf_batch_size = tf.placeholder(tf.int32, name='batch_size')
-    tf_dropout_rate = tf.placeholder(tf.float32, name='dropout_rate')
     word_embedding_size = GLOVE_EMB_SIZE + PHONETIC_EMB_SIZE
     if lstm_hidden_dim is None:
         lstm_hidden_dim = word_embedding_size * 2
@@ -142,7 +142,7 @@ def create_embedding_model(lstm_hidden_dim=None):
                                                                               HUMOR_MAX_WORDS_IN_TWEET,
                                                                               lstm_scope='TWEET_ENCODER',
                                                                               reuse=True, time_step_inputs=[])
-    return tf_batch_size, tf_dropout_rate, tf_first_input_tweets, tf_first_tweet_encoder_output, tf_hashtag, tf_second_input_tweets, tf_second_tweet_encoder_output
+    return tf_first_input_tweets, tf_first_tweet_encoder_output, tf_hashtag, tf_second_input_tweets, tf_second_tweet_encoder_output
 
 
 def build_lstm(lstm_hidden_dim, tf_batch_size, inputs, input_time_step_size, num_time_steps, lstm_scope=None,
@@ -228,10 +228,14 @@ def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
     return [tf_words, tf_batch_size], [tf_phonemes, encoder_output_emb]
 
 
+def random_word(length):
+    return ''.join(random.choice(string.lowercase) for i in range(length))
+
+
 def create_dense_layer(input_layer, input_size, output_size, activation=None, include_bias=True, name=None):
     with tf.name_scope(name):
-        tf_w = tf.Variable(tf.random_normal([input_size, output_size], stddev=.1))
-        tf_b = tf.Variable(tf.random_normal([output_size]))
+        tf_w = tf.get_variable(random_word(5), shape=[input_size, output_size], initializer=tf.contrib.layers.xavier_initializer())
+        tf_b = tf.get_variable(random_word(5), shape=[output_size], initializer=tf.contrib.layers.xavier_initializer())
         output_layer = tf.matmul(input_layer, tf_w)
         if include_bias:
             output_layer = output_layer + tf_b
@@ -293,14 +297,17 @@ def generate_phonetic_embs_from_words(words, char_to_index_path, phone_to_index_
     return np_phonetic_emb
 
 
-def create_tensorboard_visualization(model_name):
+def create_tensorboard_visualization(model_name, graph=None):
     """Saves the Tensorflow graph of your model, so you can view it in a TensorBoard console."""
     print 'Creating Tensorboard visualization'
     writer = tf.summary.FileWriter("/tmp/" + model_name + "/")
-    writer.add_graph(tf.get_default_graph())
+    if graph is None:
+        graph = tf.get_default_graph()
+    writer.add_graph(graph)
+    tf.global_variables_initializer().run()
 
 
-def predict_on_hashtag(sess, model_vars, hashtag_name, hashtag_dir, hashtag_datas, error_analysis_stats=None):
+def predict_on_hashtag(sess, model_vars, hashtag_name, hashtag_dir, hashtag_datas):
     """Predicts on a hashtag. Returns the accuracy of predictions on all tweet pairs and returns
     a list. The list contains the predictions on all tweet pairs, and tweet ids for the first and second tweets in
     each pair. If error analysis stats are provided, the function will print the tweet pairs the model performed the worst
@@ -309,9 +316,13 @@ def predict_on_hashtag(sess, model_vars, hashtag_name, hashtag_dir, hashtag_data
     print 'Predicting on hashtag %s' % hashtag_name
     np_first_tweets_char, np_second_tweets_char = extract_tweet_pair_from_hashtag_datas(hashtag_datas, hashtag_name)
 
-    [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_rating, tf_batch_size, tf_hashtag, tf_output_prob, tf_dropout_rate,
-     tf_tweet1, tf_tweet2] = model_vars
-    np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag = load_hashtag_data(hashtag_dir, hashtag_name)
+    [tf_first_input_tweets, tf_second_input_tweets, tf_predictions,
+     tf_tweet_humor_rating, tf_batch_size, tf_hashtag, tf_output_prob,
+     tf_dropout_rate, tf_tweet1, tf_tweet2] = model_vars
+
+    np_first_tweets, np_second_tweets, np_labels, \
+    first_tweet_ids, second_tweet_ids, np_hashtag = load_hashtag_data(hashtag_dir, hashtag_name)
+
     np_predictions, np_output_prob = sess.run([tf_predictions, tf_output_prob],
                                               feed_dict={tf_first_input_tweets: np_first_tweets,
                                                          tf_second_input_tweets: np_second_tweets,
@@ -321,42 +332,7 @@ def predict_on_hashtag(sess, model_vars, hashtag_name, hashtag_dir, hashtag_data
                                                          tf_tweet1: np_first_tweets_char,
                                                          tf_tweet2: np_second_tweets_char})
 
-    # # Error analysis. Generate expected value for each tweet pair. Look for worst, then for second worst, to N worst
-    # if error_analysis_stats is not None:
-    #     tweet_input_dir = error_analysis_stats[0]
-    #     num_worst_tweets_to_print = error_analysis_stats[1]
-    #     tweets, labels, tweet_ids = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv')
-    #     id_to_tweet = dict(zip(tweet_ids, tweets))
-    #
-    #     # Calculate how off each prediction was from its label (its deviation)
-    #     num_examples = np_output_prob.shape[0]
-    #     np_fractional_predictions = np_output_prob
-    #     print np_fractional_predictions
-    #     np_prediction_deviations = np.abs(np_labels - np_fractional_predictions)
-    #     average_deviation = np.mean(np_prediction_deviations)
-    #     average_error = np.mean(np.abs(np_prediction_deviations - average_deviation))
-    #     print 'Average deviation: %s' % average_deviation
-    #     print 'Average error: %s' % average_error
-    #
-    #     # Find tweets that were the farthest off from their labels
-    #     worst_deviation_indices = find_indices_larger_than_threshold(np_prediction_deviations, .9)
-    #
-    #     print 'Average label: %s' % np.mean(np_labels)
-    #
-    #     for worst_deviation_index in worst_deviation_indices:
-    #         print np_prediction_deviations[worst_deviation_index]
-    #         print id_to_tweet[first_tweet_ids[worst_deviation_index]]
-    #         print id_to_tweet[second_tweet_ids[worst_deviation_index]]
-    #         print 'Winner label(first 1 second 0): %s' % np_labels[worst_deviation_index]
-    #         print 'Winner prediction label(first 1 second 0): %s' % np_fractional_predictions[worst_deviation_index]
-    #
-    #     worst_deviation_labels = [np_labels[worst_deviation_i] for worst_deviation_i in worst_deviation_indices]
-    #     unique, unique_counts = np.unique(worst_deviation_labels, return_counts=True)
-    #     for u, c in zip(unique, unique_counts):
-    #         print u, c
-
-
     accuracy = None
     if np_labels is not None:
-        accuracy = np.mean(np_predictions == np_labels)
+        accuracy = np.mean(np.isclose(np_predictions, np_labels))
     return accuracy, [np_predictions, first_tweet_ids, second_tweet_ids]

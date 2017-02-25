@@ -172,15 +172,13 @@ def convert_tweet_to_embeddings(tweets, word_to_glove, word_to_phonetic, max_num
         tokens = tweets[i].split()
         for j in range(len(tokens)):
             if j < max_number_of_words:
-                if tokens[j] in word_to_glove:
-                    np_token_glove = np.array(word_to_glove[tokens[j]])
-                    for k in range(glove_size):
-                        np_tweet_embs[i, j*word_embedding_size + k] = np_token_glove[k]
+                # if tokens[j] in word_to_glove:
+                #     np_token_glove = np.array(word_to_glove[tokens[j]])
+                #     np_tweet_embs[i, j*word_embedding_size:j*word_embedding_size+glove_size] = np_token_glove
                 if tokens[j] in word_to_phonetic:
                     np_token_phonetic = np.array(word_to_phonetic[tokens[j]])
-                    for k in range(phonetic_emb_size):
-                        np_tweet_embs[i, j*word_embedding_size + glove_size + k] = np_token_phonetic[k]
-
+                    np_tweet_embs[i, j*word_embedding_size + glove_size:
+                                     j*word_embedding_size + glove_size + phonetic_emb_size] = np_token_phonetic
     return np_tweet_embs
 
 
@@ -431,14 +429,10 @@ def convert_words_to_indices(words, char_to_index, max_word_size=20):
     for word_index in range(m):
         word = words[word_index]
         for char_index in range(len(word)):
-            num_non_characters = 0
-            if char_index - num_non_characters < max_word_size:
+            if char_index < max_word_size:
                 char = word[char_index]
-                if char.isalpha():
-                    if char in char_to_index:
-                        np_word_indices[word_index, char_index - num_non_characters] = char_to_index[char]
-                else:
-                    num_non_characters += 1
+                if char in char_to_index:
+                    np_word_indices[word_index, char_index] = char_to_index[char]
     return np_word_indices
 
 

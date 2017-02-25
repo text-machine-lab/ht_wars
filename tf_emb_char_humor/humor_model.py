@@ -45,14 +45,14 @@ from tools import load_hashtag_data_and_vocabulary
 ex = Experiment('humor_model')
 ex.observers.append(MongoObserver.create(db_name='humor_runs'))
 
-EMBEDDING_HUMOR_MODEL_LEARNING_RATE = .00005
+EMBEDDING_HUMOR_MODEL_LEARNING_RATE = .00001
 N_TRAIN_EPOCHS = 2
 
 
 @ex.config
 def my_config():
-    learning_rate = .00005  # np.random.uniform(.00005, .0000005)
-    num_epochs = 1  # int(np.random.uniform(1.0, 4.0))
+    learning_rate = .000005  # np.random.uniform(.00005, .0000005)
+    num_epochs = 5  # int(np.random.uniform(1.0, 4.0))
     dropout = 1  # np.random.uniform(.5, 1.0)
     hidden_dim_size = 800  # int(np.random.uniform(200, 3200))
     use_emb_model = True
@@ -118,7 +118,6 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
             print trainer_hashtag_name
             if trainer_hashtag_name not in leave_out_hashtags:
                 # Train on this hashtag.
-                print 'Got here first.'
                 np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag = \
                     load_hashtag_data(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR, trainer_hashtag_name)
 
@@ -239,37 +238,36 @@ def load_build_train_and_predict(learning_rate, num_epochs, dropout, use_emb_mod
     trial_hashtag_datas, _, trial_vocab_size = \
         load_hashtag_data_and_vocabulary(HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR, None)
 
-    g = tf.Graph()
-    with g.as_default():
-        model_vars = build_humor_model(vocab_size, use_embedding_model=use_emb_model,
-                                       use_character_model=use_char_model,
-                                       hidden_dim_size=hidden_dim_size)
-        trainer_vars = build_embedding_humor_model_trainer(model_vars)
-        create_tensorboard_visualization('emb_humor_model')
-        training_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRAIN_DIR)
-        testing_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRIAL_DIR)
-        accuracies = []
+    sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
 
-        sess, training_accuracy = train_on_all_other_hashtags(model_vars, trainer_vars, training_hashtag_names,
-                                                              hashtag_datas, n_epochs=num_epochs,
-                                                              learning_rate=learning_rate,
-                                                              dropout=dropout,
-                                                              model_save_dir=model_save_dir,
-                                                              leave_out_hashtags=leave_out_hashtags)
-        print 'Mean training accuracy: %s' % training_accuracy
-        print
-        for hashtag_name in testing_hashtag_names:
-            accuracy, _ = predict_on_hashtag(sess,
-                                             model_vars,
-                                             hashtag_name,
-                                             HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR,
-                                             trial_hashtag_datas,
-                                             error_analysis_stats=[SEMEVAL_HUMOR_TRIAL_DIR, 10])
-            print 'Hashtag %s accuracy: %s' % (hashtag_name, accuracy)
-            accuracies.append(accuracy)
+    model_vars = build_humor_model(vocab_size, use_embedding_model=use_emb_model,
+                                   use_character_model=use_char_model,
+                                   hidden_dim_size=hidden_dim_size)
+    trainer_vars = build_embedding_humor_model_trainer(model_vars)
+    create_tensorboard_visualization('emb_humor_model')
+    training_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRAIN_DIR)
+    testing_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRIAL_DIR)
+    accuracies = []
 
-        test_accuracy = np.mean(accuracies)
-        print 'Final test accuracy: %s' % test_accuracy
+    sess, training_accuracy = train_on_all_other_hashtags(model_vars, trainer_vars, training_hashtag_names,
+                                                          hashtag_datas, n_epochs=num_epochs,
+                                                          learning_rate=learning_rate,
+                                                          dropout=dropout,
+                                                          model_save_dir=model_save_dir,
+                                                          leave_out_hashtags=leave_out_hashtags)
+    print 'Mean training accuracy: %s' % training_accuracy
+    print
+    for hashtag_name in testing_hashtag_names:
+        accuracy, _ = predict_on_hashtag(sess,
+                                         model_vars,
+                                         hashtag_name,
+                                         HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR,
+                                         trial_hashtag_datas)
+        print 'Hashtag %s accuracy: %s' % (hashtag_name, accuracy)
+        accuracies.append(accuracy)
+
+    test_accuracy = np.mean(accuracies)
+    print 'Final test accuracy: %s' % test_accuracy
 
     return {'train_accuracy': training_accuracy,
             'test_accuracy': test_accuracy}

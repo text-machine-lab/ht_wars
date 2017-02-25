@@ -50,13 +50,15 @@ def main():
     
     model_inputs, model_outputs = build_chars_to_phonemes_model(len(char_to_index), len(phone_to_index))
     training_inputs, training_outputs = build_trainer(model_inputs, model_outputs)
+    sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
     create_tensorboard_visualization('c2p_model')
     sess = train_model(model_inputs,
                        model_outputs,
                        training_inputs,
                        training_outputs,
                        np_training_words,
-                       np_training_pronunciations)
+                       np_training_pronunciations,
+                       sess=sess)
     np_testing_predictions, accuracy = evaluate_model_performance_on_test_set(model_inputs,
                                                                               model_outputs,
                                                                               np_testing_words,
@@ -81,7 +83,7 @@ def build_trainer(model_inputs, model_outputs):
     return [tf_labels], [tf_loss]
 
 
-def train_model(model_inputs, model_outputs, training_inputs, training_outputs, np_words, np_pronunciations):
+def train_model(model_inputs, model_outputs, training_inputs, training_outputs, np_words, np_pronunciations, sess=None):
     print 'Training model'
     if not os.path.exists(CHAR_2_PHONE_MODEL_DIR):
         os.makedirs(CHAR_2_PHONE_MODEL_DIR)
@@ -92,10 +94,11 @@ def train_model(model_inputs, model_outputs, training_inputs, training_outputs, 
     tf_phonemes = model_outputs[0]
     tf_labels = training_inputs[0]
 
+    if sess is None:
+        sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
     with tf.name_scope("SAVER"):
         saver = tf.train.Saver(max_to_keep=10)
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(tf_loss)
-    sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
     sess.run(tf.initialize_all_variables())
     current_batch_size = batch_size
     for epoch in range(n_epochs):
