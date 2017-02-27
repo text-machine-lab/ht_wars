@@ -51,7 +51,6 @@ def main():
 
 
 def convert_all_tweets_to_tweet_pairs_represented_by_glove_and_phonetic_embeddings():
-    vocabulary = pickle.load(open(HUMOR_INDEX_TO_WORD_FILE_PATH, 'rb'))
     word_to_glove = pickle.load(open(HUMOR_WORD_TO_GLOVE_FILE_PATH, 'rb'))
     word_to_phonetic = pickle.load(open(HUMOR_WORD_TO_PHONETIC_FILE_PATH, 'rb'))
     convert_tweets_to_embedding_tweet_pairs(word_to_glove,
@@ -172,7 +171,7 @@ def build_vocabulary(lines, vocabulary=None, max_word_size=15):
         tokens = line.split()
         for word in tokens:
             if len(word) < max_word_size and word not in vocabulary:
-                vocabulary.append(word)
+                    vocabulary.append(word)
     return vocabulary
 
 

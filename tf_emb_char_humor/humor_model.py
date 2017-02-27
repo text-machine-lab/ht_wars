@@ -16,24 +16,9 @@ import tensorflow as tf
 from sacred import Experiment
 from sacred.observers import MongoObserver
 
-from config import CHAR_HUMOR_MODEL_DIR
-from config import EMB_CHAR_HUMOR_MODEL_DIR
-from config import EMB_HUMOR_MODEL_DIR
-from config import GLOVE_EMB_SIZE
-from config import HUMOR_CHAR_TO_INDEX_FILE_PATH
-from config import HUMOR_MAX_WORDS_IN_HASHTAG
-from config import HUMOR_MAX_WORDS_IN_TWEET
-from config import HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
-from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
-from config import HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR
-from config import HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR
-from config import PHONETIC_EMB_SIZE
-from config import SEMEVAL_HUMOR_TRAIN_DIR
-from config import SEMEVAL_HUMOR_TRIAL_DIR
-from config import TWEET_SIZE
+from config import *
 from tf_tools import GPU_OPTIONS
 from tf_tools import HUMOR_DROPOUT
-from tf_tools import create_dense_layer
 from tf_tools import create_tensorboard_visualization
 from tf_tools import predict_on_hashtag
 from tf_tools import build_humor_model
@@ -41,6 +26,8 @@ from tools import extract_tweet_pair_from_hashtag_datas
 from tools import get_hashtag_file_names
 from tools import load_hashtag_data
 from tools import load_hashtag_data_and_vocabulary
+import tensorflow.contrib.slim as slim
+
 
 ex = Experiment('humor_model')
 ex.observers.append(MongoObserver.create(db_name='humor_runs'))
@@ -81,7 +68,11 @@ def build_embedding_humor_model_trainer(model_vars):
 
     tf_loss = tf.reduce_sum(tf_cross_entropy) / tf.cast(tf_batch_size, tf.float32)
 
-    return [tf_loss, tf_labels]
+    slim.losses.add_loss(tf_loss)
+
+    loss_total = slim.losses.get_total_loss(add_regularization_losses=True)
+
+    return [loss_total, tf_labels]
 
 
 def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag_datas, n_epochs=1,
@@ -156,7 +147,7 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
                         np_batch_second_tweets_char = np_second_tweets_char[
                                                       starting_training_example:starting_training_example + current_batch_size,
                                                       :]
-                        # Run train step here.
+
                         [np_batch_predictions, batch_loss, _] = sess.run([tf_predictions, tf_loss, train_op],
                                                                          feed_dict={
                                                                              tf_first_input_tweets: np_batch_first_tweets,
@@ -283,7 +274,22 @@ def main(learning_rate, num_epochs, dropout, use_emb_model,
 
 
 if __name__ == '__main__':
-    num_experiments_run = 1
-    for index in range(num_experiments_run):
-        print 'Experiment: %s' % index
-        r = ex.run()
+    # num_experiments_run = 1
+    # for index in range(num_experiments_run):
+    #     print 'Experiment: %s' % index
+    #     r = ex.run()
+    learning_rate = .000005  # np.random.uniform(.00005, .0000005)
+    num_epochs = 5  # int(np.random.uniform(1.0, 4.0))
+    dropout = 1  # np.random.uniform(.5, 1.0)
+    hidden_dim_size = 800  # int(np.random.uniform(200, 3200))
+    use_emb_model = True
+    use_char_model = True
+    model_save_dir = EMB_CHAR_HUMOR_MODEL_DIR
+    if '-emb-only' in sys.argv:
+        use_char_model = False
+        model_save_dir = EMB_HUMOR_MODEL_DIR
+    elif '-char-only' in sys.argv:
+        use_emb_model = False
+        model_save_dir = CHAR_HUMOR_MODEL_DIR
+    load_build_train_and_predict(learning_rate, num_epochs, dropout, use_emb_model,
+                             use_char_model, model_save_dir, hidden_dim_size)

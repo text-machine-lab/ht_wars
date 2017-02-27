@@ -94,9 +94,4 @@ data/*
 *~
 
 .idea/
-keras_char_humor/char_to_index.cpkl
-tf_char_to_phoneme/cmu_char_to_index.cpkl
-tf_char_to_phoneme/cmu_phone_to_index.cpkl
-tf_char_to_phoneme/cmu_pronunciations.npy
-tf_char_to_phoneme/cmu_words.npy
-tf_char_to_phoneme/saved_models/
+

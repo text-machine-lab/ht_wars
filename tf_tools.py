@@ -5,13 +5,13 @@ import numpy as np
 import cPickle as pickle
 from keras.layers import Convolution1D, MaxPooling1D
 from keras.layers import Input, Dense, Flatten, Embedding
+from keras.regularizers import l2
 from tools import convert_words_to_indices
 from tools import invert_dictionary
 from tools import load_hashtag_data
 from tools import extract_tweet_pair_from_hashtag_datas
-from config import CHAR_2_PHONE_MODEL_DIR
-from config import HUMOR_MAX_WORDS_IN_TWEET, HUMOR_MAX_WORDS_IN_HASHTAG
-from config import GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE, TWEET_SIZE
+from config import *
+import tensorflow.contrib.slim as slim
 
 GPU_OPTIONS = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
 
@@ -51,7 +51,7 @@ def create_character_model(tweet_size, vocab_size):
     convolution_layer_2 = Convolution1D(num_filters_2, filter_size_2)
     max_pool_layer = MaxPooling1D(stride=4)
     flatten = Flatten()
-    tweet_conv_emb = Dense(fc1_dim, activation='relu')
+    tweet_conv_emb = Dense(fc1_dim, activation='relu', W_regularizer=l2(0.01))
 
     tweet_1_conv1 = max_pool_layer(convolution_layer_1(tweet1_emb))
     tweet_2_conv1 = max_pool_layer(convolution_layer_1(tweet2_emb))
@@ -86,6 +86,7 @@ def build_humor_model(vocab_size, use_embedding_model=True, use_character_model=
         dense_features.append(tweet1_conv_emb)
         dense_features.append(tweet2_conv_emb)
     tf_tweet_pair_emb = tf.concat(1, dense_features)
+    print tf_tweet_pair_emb.get_shape()
     tweet_pair_emb_size = int(tf_tweet_pair_emb.get_shape()[1])
     tf_tweet_pair_emb_dropout = tf.nn.dropout(tf_tweet_pair_emb, keep_prob=tf_dropout_rate)
 
@@ -228,7 +229,7 @@ def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
     return [tf_words, tf_batch_size], [tf_phonemes, encoder_output_emb]
 
 
-def create_dense_layer(input_layer, input_size, output_size, activation=None, include_bias=True, name=None):
+def create_dense_layer(input_layer, input_size, output_size, activation=None, include_bias=True, reg_const=.0005, name=None):
     with tf.name_scope(name):
         tf_w = tf.Variable(tf.random_normal([input_size, output_size], stddev=.1))
         tf_b = tf.Variable(tf.random_normal([output_size]))
@@ -244,6 +245,10 @@ def create_dense_layer(input_layer, input_size, output_size, activation=None, in
         else:
             print 'Error: Did not specify layer activation'
 
+    regularizer = slim.l2_regularizer(reg_const)
+    regularizer_loss = regularizer(tf_w) + regularizer(tf_b)
+    slim.losses.add_loss(regularizer_loss)
+
     return output_layer, tf_w, tf_b
 
 
@@ -257,7 +262,7 @@ def generate_phonetic_embs_from_words(words, char_to_index_path, phone_to_index_
     model_inputs, model_outputs = build_chars_to_phonemes_model(character_vocab_size, phoneme_vocab_size)
     [tf_words, tf_batch_size] = model_inputs
     [tf_phonemes, lstm_hidden_state] = model_outputs
-    tf_phonetic_emb = tf.concat(1, lstm_hidden_state)
+    tf_phonetic_emb = lstm_hidden_state
 
     np_word_indices = convert_words_to_indices(words, char_to_index)
     print np_word_indices
@@ -285,7 +290,7 @@ def generate_phonetic_embs_from_words(words, char_to_index_path, phone_to_index_
         return -1
 
     np_phonetic_emb = sess.run(tf_phonetic_emb, feed_dict={tf_words: np_word_indices,
-                                                           tf_batch_size: len(words),})
+                                                           tf_batch_size: len(words)})
 
     print np_phonetic_emb.shape
     print np.mean(np.abs(np_phonetic_emb))
@@ -311,6 +316,7 @@ def predict_on_hashtag(sess, model_vars, hashtag_name, hashtag_dir, hashtag_data
 
     [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_rating, tf_batch_size, tf_hashtag, tf_output_prob, tf_dropout_rate,
      tf_tweet1, tf_tweet2] = model_vars
+
     np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag = load_hashtag_data(hashtag_dir, hashtag_name)
     np_predictions, np_output_prob = sess.run([tf_predictions, tf_output_prob],
                                               feed_dict={tf_first_input_tweets: np_first_tweets,
@@ -320,41 +326,6 @@ def predict_on_hashtag(sess, model_vars, hashtag_name, hashtag_dir, hashtag_data
                                                          tf_dropout_rate: 1.0,
                                                          tf_tweet1: np_first_tweets_char,
                                                          tf_tweet2: np_second_tweets_char})
-
-    # # Error analysis. Generate expected value for each tweet pair. Look for worst, then for second worst, to N worst
-    # if error_analysis_stats is not None:
-    #     tweet_input_dir = error_analysis_stats[0]
-    #     num_worst_tweets_to_print = error_analysis_stats[1]
-    #     tweets, labels, tweet_ids = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv')
-    #     id_to_tweet = dict(zip(tweet_ids, tweets))
-    #
-    #     # Calculate how off each prediction was from its label (its deviation)
-    #     num_examples = np_output_prob.shape[0]
-    #     np_fractional_predictions = np_output_prob
-    #     print np_fractional_predictions
-    #     np_prediction_deviations = np.abs(np_labels - np_fractional_predictions)
-    #     average_deviation = np.mean(np_prediction_deviations)
-    #     average_error = np.mean(np.abs(np_prediction_deviations - average_deviation))
-    #     print 'Average deviation: %s' % average_deviation
-    #     print 'Average error: %s' % average_error
-    #
-    #     # Find tweets that were the farthest off from their labels
-    #     worst_deviation_indices = find_indices_larger_than_threshold(np_prediction_deviations, .9)
-    #
-    #     print 'Average label: %s' % np.mean(np_labels)
-    #
-    #     for worst_deviation_index in worst_deviation_indices:
-    #         print np_prediction_deviations[worst_deviation_index]
-    #         print id_to_tweet[first_tweet_ids[worst_deviation_index]]
-    #         print id_to_tweet[second_tweet_ids[worst_deviation_index]]
-    #         print 'Winner label(first 1 second 0): %s' % np_labels[worst_deviation_index]
-    #         print 'Winner prediction label(first 1 second 0): %s' % np_fractional_predictions[worst_deviation_index]
-    #
-    #     worst_deviation_labels = [np_labels[worst_deviation_i] for worst_deviation_i in worst_deviation_indices]
-    #     unique, unique_counts = np.unique(worst_deviation_labels, return_counts=True)
-    #     for u, c in zip(unique, unique_counts):
-    #         print u, c
-
 
     accuracy = None
     if np_labels is not None:

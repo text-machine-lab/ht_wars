@@ -106,9 +106,12 @@ def save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag, directory=H
     np.save(directory + hashtag + '_labels.npy', np_tweet_pair_labels)
 
 
-def process_hashtag_data(hashtag_dir, char_to_index_path, tweet_pair_path):
+def process_hashtag_data(hashtag_dir, char_to_index_path, tweet_pair_path, generate_index=True):
     hashtags = get_hashtag_file_names(hashtag_dir)
-    char_to_index = build_character_vocabulary(hashtags, directory=hashtag_dir)
+    if generate_index:
+        char_to_index = build_character_vocabulary(hashtags, directory=hashtag_dir)
+    else:
+        char_to_index = pickle.load(open(char_to_index_path, 'rb'))
     print('Size of character vocabulary: %s' % len(char_to_index))
     output_tweet_statistics(hashtags, directory=hashtag_dir)
     print 'Extracting tweet pairs...'
@@ -119,7 +122,7 @@ def process_hashtag_data(hashtag_dir, char_to_index_path, tweet_pair_path):
         np_tweet_pairs, np_tweet_pair_labels = format_tweet_pairs(data, char_to_index)
         save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag, directory=tweet_pair_path)
     print 'Saving char_to_index.cpkl containing character vocabulary'
-    if char_to_index_path is not None:
+    if generate_index:
         pickle.dump(char_to_index, open(char_to_index_path, 'wb'))
     print "Done!"
 
@@ -431,14 +434,10 @@ def convert_words_to_indices(words, char_to_index, max_word_size=20):
     for word_index in range(m):
         word = words[word_index]
         for char_index in range(len(word)):
-            num_non_characters = 0
-            if char_index - num_non_characters < max_word_size:
+            if char_index < max_word_size:
                 char = word[char_index]
-                if char.isalpha():
-                    if char in char_to_index:
-                        np_word_indices[word_index, char_index - num_non_characters] = char_to_index[char]
-                else:
-                    num_non_characters += 1
+                if char in char_to_index:
+                    np_word_indices[word_index, char_index] = char_to_index[char]
     return np_word_indices
 
 

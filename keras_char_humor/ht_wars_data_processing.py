@@ -29,13 +29,14 @@ from config import HUMOR_CHAR_TO_INDEX_FILE_PATH
 from tools import get_hashtag_file_names
 from tools import process_hashtag_data
 
+
 def main():
     # Find hashtags, create character vocabulary, print dataset statistics, extract/format tweet pairs and save everything.
     # Repeat this for both training and trial sets.
     print "Processing #HashtagWars training data..."
     process_hashtag_data(SEMEVAL_HUMOR_TRAIN_DIR, HUMOR_CHAR_TO_INDEX_FILE_PATH, HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR)
     print "Processing #HashtagWars trial data..."
-    process_hashtag_data(SEMEVAL_HUMOR_TRIAL_DIR, None, HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR)
+    process_hashtag_data(SEMEVAL_HUMOR_TRIAL_DIR, HUMOR_CHAR_TO_INDEX_FILE_PATH, HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR, generate_index=False)
 
 
 def test_reconstruct_tweets_from_file():

@@ -6,12 +6,11 @@ import numpy as np
 import random
 
 from config import DATA_DIR, HUMOR_MAX_WORDS_IN_TWEET, HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE
-from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
-from config import HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
+from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR, HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR
+from config import HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR, HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR
 from config import SEMEVAL_HUMOR_TRAIN_DIR
 from config import TWEET_PAIR_LABEL_RANDOM_SEED
 from humor_processing import build_vocabulary
-from humor_processing import convert_tweet_to_embeddings
 from humor_processing import create_dictionary_mapping
 from humor_processing import look_up_glove_embeddings
 from config import GLOVE_EMB_SIZE
@@ -29,7 +28,6 @@ def main():
     test_build_vocabulary()
     test_format_text_with_hashtag()
     test_load_tweets_from_hashtag()
-    # test_look_up_glove_embeddings_and_convert_tweets_to_gloves()
     test_saved_files()
     test_create_dictionary_mapping()
     test_extract_tweet_pairs()
@@ -43,6 +41,11 @@ def test_embedding_character_labels_match():
     np_emb_labels = np.load(open(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR + example_hashtag + '_label.npy'))
     np_char_labels = np.load(open(HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR + example_hashtag + '_labels.npy'))
     assert np.array_equal(np_emb_labels, np_char_labels)
+
+    example_hashtag_trial = 'Gentler_Songs'
+    np_emb_labels_trial = np.load(open(HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR + example_hashtag_trial + '_label.npy'))
+    np_char_labels_trial = np.load(open(HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR + example_hashtag_trial + '_labels.npy'))
+    assert np.array_equal(np_emb_labels_trial, np_char_labels_trial)
 
 
 def test_extract_tweet_pairs():
