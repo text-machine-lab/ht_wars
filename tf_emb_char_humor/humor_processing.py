@@ -171,7 +171,7 @@ def build_vocabulary(lines, vocabulary=None, max_word_size=15):
         tokens = line.split()
         for word in tokens:
             if len(word) < max_word_size and word not in vocabulary:
-                    vocabulary.append(word)
+                vocabulary.append(word)
     return vocabulary
 
 

@@ -51,7 +51,7 @@ def create_character_model(tweet_size, vocab_size):
     convolution_layer_2 = Convolution1D(num_filters_2, filter_size_2)
     max_pool_layer = MaxPooling1D(stride=4)
     flatten = Flatten()
-    tweet_conv_emb = Dense(fc1_dim, activation='relu', W_regularizer=l2(0.01))
+    tweet_conv_emb = Dense(fc1_dim, activation='relu')
 
     tweet_1_conv1 = max_pool_layer(convolution_layer_1(tweet1_emb))
     tweet_2_conv1 = max_pool_layer(convolution_layer_1(tweet2_emb))
