@@ -109,7 +109,6 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
             print trainer_hashtag_name
             if trainer_hashtag_name not in leave_out_hashtags:
                 # Train on this hashtag.
-                print 'Got here first.'
                 np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag = \
                     load_hashtag_data(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR, trainer_hashtag_name)
 
@@ -278,8 +277,8 @@ if __name__ == '__main__':
     # for index in range(num_experiments_run):
     #     print 'Experiment: %s' % index
     #     r = ex.run()
-    learning_rate = .00005  # np.random.uniform(.00005, .0000005)
-    num_epochs = 1  # int(np.random.uniform(1.0, 4.0))
+    learning_rate = .000005  # np.random.uniform(.00005, .0000005)
+    num_epochs = 5  # int(np.random.uniform(1.0, 4.0))
     dropout = 1  # np.random.uniform(.5, 1.0)
     hidden_dim_size = 800  # int(np.random.uniform(200, 3200))
     use_emb_model = True
