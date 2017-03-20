@@ -64,7 +64,7 @@ def build_embedding_humor_model_trainer(model_vars):
      output_prob, tf_dropout_rate, tf_tweet1, tf_tweet2] = model_vars
     tf_reshaped_labels = tf.cast(tf.reshape(tf_labels, [-1, 1]), tf.float32)
 
-    tf_cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(tf_tweet_humor_rating, tf_reshaped_labels)
+    tf_cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits(logits=tf_tweet_humor_rating, labels=tf_reshaped_labels)
 
     tf_loss = tf.reduce_sum(tf_cross_entropy) / tf.cast(tf_batch_size, tf.float32)
 
@@ -95,7 +95,7 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
 
     sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(tf_loss)
-    init = tf.initialize_all_variables()
+    init = tf.global_variables_initializer()
     with tf.name_scope("SAVER"):
         saver = tf.train.Saver(max_to_keep=10)
     sess.run(init)

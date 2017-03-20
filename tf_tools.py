@@ -49,7 +49,7 @@ def create_character_model(tweet_size, vocab_size):
     # and then flatten them for dense layer.
     convolution_layer_1 = Convolution1D(num_filters_1, filter_size_1, input_shape=[tweet_size, vocab_size])
     convolution_layer_2 = Convolution1D(num_filters_2, filter_size_2)
-    max_pool_layer = MaxPooling1D(stride=4)
+    max_pool_layer = MaxPooling1D(strides=4)
     flatten = Flatten()
     tweet_conv_emb = Dense(fc1_dim, activation='relu')
 
@@ -85,7 +85,7 @@ def build_humor_model(vocab_size, use_embedding_model=True, use_character_model=
     if use_character_model:
         dense_features.append(tweet1_conv_emb)
         dense_features.append(tweet2_conv_emb)
-    tf_tweet_pair_emb = tf.concat(1, dense_features)
+    tf_tweet_pair_emb = tf.concat(dense_features, 1)
     print tf_tweet_pair_emb.get_shape()
     tweet_pair_emb_size = int(tf_tweet_pair_emb.get_shape()[1])
     tf_tweet_pair_emb_dropout = tf.nn.dropout(tf_tweet_pair_emb, keep_prob=tf_dropout_rate)
@@ -99,8 +99,9 @@ def build_humor_model(vocab_size, use_embedding_model=True, use_character_model=
     # Code from Alexey to transform fractional predictions into prediction labels
     output_logits = tf.reshape(tf_tweet_humor_rating, [-1])
     output_prob = tf.nn.sigmoid(output_logits)
-    output = tf.select(tf.greater_equal(output_prob, 0.5), tf.ones_like(output_prob, dtype=tf.int32),
-                       tf.zeros_like(output_prob, dtype=tf.int32))
+    output = tf.where(tf.greater_equal(output_prob, 0.5),
+                      x=tf.ones_like(output_prob, dtype=tf.int32),
+                      y=tf.zeros_like(output_prob, dtype=tf.int32))
 
     # Print model variables (debug)
     trainable_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
@@ -158,7 +159,7 @@ def build_lstm(lstm_hidden_dim, tf_batch_size, inputs, input_time_step_size, num
     time_step_inputs - Inputs that are per time step. The same tensor is inserted into the model at each time step"""
     if time_step_inputs is None:
         time_step_inputs = []
-    lstm = tf.nn.rnn_cell.LSTMCell(num_units=lstm_hidden_dim, state_is_tuple=True)
+    lstm = tf.contrib.rnn.LSTMCell(num_units=lstm_hidden_dim, state_is_tuple=True)
     tf_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
     for i in range(num_time_steps):
         # Grab time step input for each input tensor
@@ -167,7 +168,7 @@ def build_lstm(lstm_hidden_dim, tf_batch_size, inputs, input_time_step_size, num
             current_time_step_inputs.append(
                 tf.slice(tf_input, [0, i * input_time_step_size], [-1, input_time_step_size]))
 
-        tf_input_time_step = tf.concat(1, current_time_step_inputs + time_step_inputs)
+        tf_input_time_step = tf.concat(current_time_step_inputs + time_step_inputs, 1)
 
         with tf.variable_scope(lstm_scope) as scope:
             if i > 0 or reuse:
@@ -188,7 +189,7 @@ def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
         # Lookup up embeddings for all characters in each word.
         tf_char_emb = tf.Variable(tf.random_normal([char_vocab_size, PHONE_CHAR_EMB_DIM]), name='character_emb')
         # Insert each character one by one into an LSTM.
-        lstm = tf.nn.rnn_cell.LSTMCell(num_units=PHONE_ENCODER_LSTM_EMB_DIM, state_is_tuple=True)
+        lstm = tf.contrib.rnn.LSTMCell(num_units=PHONE_ENCODER_LSTM_EMB_DIM, state_is_tuple=True)
         encoder_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
         for i in range(MAX_WORD_SIZE):
             tf_char_embedding = tf.nn.embedding_lookup(tf_char_emb, tf_words[:, i])
@@ -219,7 +220,7 @@ def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
                     decoder_output, decoder_hidden_state = lstm(encoder_output_emb, decoder_hidden_state)
                 phoneme = tf.matmul(decoder_output, tf_phone_pred_w) + tf_phone_pred_b
                 phonemes.append(phoneme)
-        tf_phonemes = tf.pack(phonemes, axis=1)
+        tf_phonemes = tf.stack(phonemes, axis=1)
     # Print model variables.
     model_variables = tf.trainable_variables()
     print 'Model variables:'

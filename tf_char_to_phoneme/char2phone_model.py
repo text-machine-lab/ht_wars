@@ -76,7 +76,7 @@ def build_trainer(model_inputs, model_outputs):
     tf_batch_size = model_inputs[1]
     tf_labels = tf.placeholder(tf.int32, [None, MAX_PRONUNCIATION_SIZE], 'pronunciations')
     tf_phonemes = model_outputs[0]
-    tf_cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(tf_phonemes, tf_labels, name='loss')
+    tf_cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=tf_phonemes, labels=tf_labels, name='loss')
     tf_loss = tf.reduce_sum(tf_cross_entropy) / tf.cast(tf_batch_size, tf.float32)
     return [tf_labels], [tf_loss]
 
@@ -96,7 +96,7 @@ def train_model(model_inputs, model_outputs, training_inputs, training_outputs, 
         saver = tf.train.Saver(max_to_keep=10)
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(tf_loss)
     sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
-    sess.run(tf.initialize_all_variables())
+    sess.run(tf.global_variables_initializer())
     current_batch_size = batch_size
     for epoch in range(n_epochs):
         print 'Epoch %s' % epoch
