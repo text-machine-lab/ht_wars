@@ -1,13 +1,11 @@
 """David Donahue 2016. For a given hashtag Dog_Jobs.tsv, it produces a file Dog_Jobs_PREDICT.tsv."""
 import os
-from config import EMB_CHAR_HUMOR_MODEL_DIR
-from config import SEMEVAL_HUMOR_EVAL_DIR
-from config import SEMEVAL_HUMOR_TRIAL_DIR
-from config import SEMEVAL_EVAL_PREDICTIONS
-from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR
-from tools import get_hashtag_file_names
-from tools import load_hashtag_data
+
 import humor_predictor
+from config import EMB_CHAR_HUMOR_MODEL_DIR
+from config import SEMEVAL_EVAL_PREDICTIONS
+from config import SEMEVAL_HUMOR_EVAL_DIR
+from tools import get_hashtag_file_names
 
 
 def main():

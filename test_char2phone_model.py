@@ -1,11 +1,11 @@
 """David Donahue 2016. This script tests the implementation of the character-to-phoneme model."""
 
-from char2phone_processing import CMU_NP_WORDS_FILE_PATH
-from char2phone_processing import CMU_NP_PRONUNCIATIONS_FILE_PATH
-from char2phone_model import import_words_and_pronunciations_from_files
-from tf_tools import GPU_OPTIONS
-from char2phone_model import build_chars_to_phonemes_model
-from tf_tools import PHONE_CHAR_EMB_DIM
+from c2p_processing import CMU_NP_WORDS_FILE_PATH
+from c2p_processing import CMU_NP_PRONUNCIATIONS_FILE_PATH
+from c2p_model import import_words_and_pronunciations_from_files
+from tools_tf import GPU_OPTIONS
+from c2p_model import build_chars_to_phonemes_model
+from tools_tf import PHONE_CHAR_EMB_DIM
 
 import tensorflow as tf
 import numpy as np

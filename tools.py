@@ -10,13 +10,10 @@ from os import walk
 import nltk
 import numpy as np
 
-from config import TWEET_SIZE, TWEET_PAIR_LABEL_RANDOM_SEED
-from config import HUMOR_MAX_WORDS_IN_HASHTAG, HUMOR_MAX_WORDS_IN_TWEET
-from config import GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE
-from config import SEMEVAL_HUMOR_TRAIN_DIR, HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
+import config
 
 
-def output_tweet_statistics(hashtags, directory=SEMEVAL_HUMOR_TRAIN_DIR):
+def output_tweet_statistics(hashtags, directory=config.SEMEVAL_HUMOR_TRAIN_DIR):
     """This function analyzes the dataset and prints statistics for it.
     These statistics have to do with the number of tweets, the largest and average
     length of tweets - for all tweets, top-ten tweets, and winning tweets."""
@@ -76,7 +73,7 @@ def output_tweet_statistics(hashtags, directory=SEMEVAL_HUMOR_TRAIN_DIR):
     print 'Winning tweet length standard deviation: %s' % winning_tweet_std_dev
 
 
-def build_character_vocabulary(hashtags, directory=SEMEVAL_HUMOR_TRAIN_DIR):
+def build_character_vocabulary(hashtags, directory=config.SEMEVAL_HUMOR_TRAIN_DIR):
     """Find all characters special or alphabetical that appear in the dataset.
     Construct a vocabulary that assigns a unique index to each character and
     return that vocabulary. Vocabulary does not include anything with a backslash."""
@@ -96,7 +93,7 @@ def build_character_vocabulary(hashtags, directory=SEMEVAL_HUMOR_TRAIN_DIR):
     return vocabulary
 
 
-def save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag, directory=HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR):
+def save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag, directory=config.HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR):
     print 'Saving data for hashtag %s' % hashtag
     # Create directories if they don't exist
     if not os.path.exists(directory):
@@ -117,7 +114,7 @@ def process_hashtag_data(hashtag_dir, char_to_index_path, tweet_pair_path, gener
     print 'Extracting tweet pairs...'
     for i in range(len(hashtags)):
         hashtag = hashtags[i]
-        random.seed(TWEET_PAIR_LABEL_RANDOM_SEED + hashtag)
+        random.seed(config.TWEET_PAIR_LABEL_RANDOM_SEED + hashtag)
         data = extract_tweet_pairs_from_file(hashtag_dir + hashtag + '.tsv')
         np_tweet_pairs, np_tweet_pair_labels = format_tweet_pairs(data, char_to_index)
         save_hashtag_data(np_tweet_pairs, np_tweet_pair_labels, hashtag, directory=tweet_pair_path)
@@ -204,7 +201,7 @@ def convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name, word
     formatted_hashtag_name = ' '.join(hashtag_name.split('_')).lower()
     tweets, labels, tweet_ids = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv',
                                                          explicit_hashtag=formatted_hashtag_name)  # formatted_hashtag_name)
-    random.seed(TWEET_PAIR_LABEL_RANDOM_SEED + hashtag_name)
+    random.seed(config.TWEET_PAIR_LABEL_RANDOM_SEED + hashtag_name)
     if len(labels) > 0:
         tweet_pairs = extract_tweet_pairs_by_rank(tweets, labels, tweet_ids)
     else:
@@ -218,16 +215,16 @@ def convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name, word
         labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
         np_label = np.array(labels)
     np_hashtag_gloves_col = convert_tweet_to_embeddings([formatted_hashtag_name], word_to_glove, word_to_phonetic,
-                                                        HUMOR_MAX_WORDS_IN_HASHTAG, GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
+                                                        config.HUMOR_MAX_WORDS_IN_HASHTAG, config.GLOVE_EMB_SIZE, config.PHONETIC_EMB_SIZE)
     np_hashtag_gloves = np.repeat(np_hashtag_gloves_col, len(tweet1), axis=0)
-    np_tweet1_gloves = convert_tweet_to_embeddings(tweet1, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET,
-                                                   GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
-    np_tweet2_gloves = convert_tweet_to_embeddings(tweet2, word_to_glove, word_to_phonetic, HUMOR_MAX_WORDS_IN_TWEET,
-                                                   GLOVE_EMB_SIZE, PHONETIC_EMB_SIZE)
+    np_tweet1_gloves = convert_tweet_to_embeddings(tweet1, word_to_glove, word_to_phonetic, config.HUMOR_MAX_WORDS_IN_TWEET,
+                                                   config.GLOVE_EMB_SIZE, config.PHONETIC_EMB_SIZE)
+    np_tweet2_gloves = convert_tweet_to_embeddings(tweet2, word_to_glove, word_to_phonetic, config.HUMOR_MAX_WORDS_IN_TWEET,
+                                                   config.GLOVE_EMB_SIZE, config.PHONETIC_EMB_SIZE)
     return np_tweet1_gloves, np_tweet2_gloves, tweet1_id, tweet2_id, np_label, np_hashtag_gloves
 
 
-def extract_tweet_pair_from_hashtag_datas(hashtag_datas, hashtag_name, tweet_size=TWEET_SIZE):
+def extract_tweet_pair_from_hashtag_datas(hashtag_datas, hashtag_name, tweet_size=config.TWEET_SIZE):
     for hashtag_data in hashtag_datas:
         current_hashtag_name = hashtag_data[0]
         if current_hashtag_name == hashtag_name:

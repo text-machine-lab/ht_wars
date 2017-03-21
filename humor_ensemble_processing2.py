@@ -1,22 +1,21 @@
 """David Donahue 2017. This script creates predictions for the trial and evaluation datasets.
 Saves labels for the trial dataset."""
-import humor_predictor
-import tensorflow as tf
-import numpy as np
 import cPickle as pickle
-from keras import backend as K
-from config import SEMEVAL_HUMOR_TRIAL_DIR
-from config import SEMEVAL_HUMOR_EVAL_DIR
-from config import EMB_CHAR_HUMOR_MODEL_DIR, EMB_HUMOR_MODEL_DIR, CHAR_HUMOR_MODEL_DIR
-from config import HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR
 
-from config import HUMOR_TRIAL_TWEET_PAIR_PREDICTIONS, HUMOR_TRIAL_PREDICTION_HASHTAGS
+import numpy as np
+import tensorflow as tf
+from keras import backend as K
+
+import humor_predictor
+from config import EMB_CHAR_HUMOR_MODEL_DIR, EMB_HUMOR_MODEL_DIR, CHAR_HUMOR_MODEL_DIR
+from config import HUMOR_EVAL_PREDICTION_FIRST_TWEET_IDS, HUMOR_EVAL_PREDICTION_SECOND_TWEET_IDS
+from config import HUMOR_EVAL_TWEET_PAIR_PREDICTIONS, HUMOR_EVAL_PREDICTION_HASHTAGS
 from config import HUMOR_TRIAL_PREDICTION_FIRST_TWEET_IDS, HUMOR_TRIAL_PREDICTION_SECOND_TWEET_IDS
 from config import HUMOR_TRIAL_PREDICTION_LABELS
-from config import HUMOR_EVAL_TWEET_PAIR_PREDICTIONS, HUMOR_EVAL_PREDICTION_HASHTAGS
-from config import HUMOR_EVAL_PREDICTION_FIRST_TWEET_IDS, HUMOR_EVAL_PREDICTION_SECOND_TWEET_IDS
-from config import HUMOR_EVAL_PREDICTION_LABELS
-
+from config import HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR
+from config import HUMOR_TRIAL_TWEET_PAIR_PREDICTIONS, HUMOR_TRIAL_PREDICTION_HASHTAGS
+from config import SEMEVAL_HUMOR_EVAL_DIR
+from config import SEMEVAL_HUMOR_TRIAL_DIR
 from tools import get_hashtag_file_names
 from tools import load_hashtag_data
 

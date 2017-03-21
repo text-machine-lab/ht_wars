@@ -16,24 +16,14 @@ import tensorflow as tf
 from sacred import Experiment
 from sacred.observers import MongoObserver
 
-from config import *
-from tf_tools import GPU_OPTIONS
-from tf_tools import HUMOR_DROPOUT
-from tf_tools import create_tensorboard_visualization
-from tf_tools import predict_on_hashtag
-from tf_tools import build_humor_model
-from tools import extract_tweet_pair_from_hashtag_datas
-from tools import get_hashtag_file_names
-from tools import load_hashtag_data
-from tools import load_hashtag_data_and_vocabulary
+import config
+import tools_tf
+import tools
 import tensorflow.contrib.slim as slim
 
 
 ex = Experiment('humor_model')
 ex.observers.append(MongoObserver.create(db_name='humor_runs'))
-
-EMBEDDING_HUMOR_MODEL_LEARNING_RATE = .00005
-N_TRAIN_EPOCHS = 2
 
 
 @ex.config
@@ -44,13 +34,13 @@ def my_config():
     hidden_dim_size = 800  # int(np.random.uniform(200, 3200))
     use_emb_model = True
     use_char_model = True
-    model_save_dir = EMB_CHAR_HUMOR_MODEL_DIR
+    model_save_dir = config.EMB_CHAR_HUMOR_MODEL_DIR
     if '-emb-only' in sys.argv:
         use_char_model = False
-        model_save_dir = EMB_HUMOR_MODEL_DIR
+        model_save_dir = config.EMB_HUMOR_MODEL_DIR
     elif '-char-only' in sys.argv:
         use_emb_model = False
-        model_save_dir = CHAR_HUMOR_MODEL_DIR
+        model_save_dir = config.CHAR_HUMOR_MODEL_DIR
 
 
 def build_embedding_humor_model_trainer(model_vars):
@@ -76,8 +66,8 @@ def build_embedding_humor_model_trainer(model_vars):
 
 
 def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag_datas, n_epochs=1,
-                                batch_size=50, learning_rate=EMBEDDING_HUMOR_MODEL_LEARNING_RATE,
-                                dropout=HUMOR_DROPOUT, model_save_dir=EMB_CHAR_HUMOR_MODEL_DIR, leave_out_hashtags=None):
+                                batch_size=50, learning_rate=5e-4,
+                                dropout=config.HUMOR_KEEP_PROB, model_save_dir=config.EMB_CHAR_HUMOR_MODEL_DIR, leave_out_hashtags=None):
     """Trains on all hashtags in the SEMEVAL_HUMOR_TRAIN_DIR directory. Extracts inputs and labels from
     each hashtag, and trains in batches. Inserts input into model and evaluates output using model_vars.
     Minimizes loss defined in trainer_vars. Repeats for n_epoch epochs. For zero epochs, the model is not trained
@@ -93,7 +83,7 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
      tf_tweet1, tf_tweet2] = model_vars
     [tf_loss, tf_labels] = trainer_vars
 
-    sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
+    sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=tools_tf.GPU_OPTIONS))
     train_op = tf.train.AdamOptimizer(learning_rate).minimize(tf_loss)
     init = tf.global_variables_initializer()
     with tf.name_scope("SAVER"):
@@ -110,10 +100,10 @@ def train_on_all_other_hashtags(model_vars, trainer_vars, hashtag_names, hashtag
             if trainer_hashtag_name not in leave_out_hashtags:
                 # Train on this hashtag.
                 np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag = \
-                    load_hashtag_data(HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR, trainer_hashtag_name)
+                    tools.load_hashtag_data(config.HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR, trainer_hashtag_name)
 
                 np_first_tweets_char, np_second_tweets_char = \
-                    extract_tweet_pair_from_hashtag_datas(hashtag_datas, trainer_hashtag_name)
+                    tools.extract_tweet_pair_from_hashtag_datas(hashtag_datas, trainer_hashtag_name)
                 current_batch_size = batch_size
                 # Use these parameters to keep track of batch size and start location.
                 starting_training_example = 0
@@ -224,20 +214,20 @@ def load_build_train_and_predict(learning_rate, num_epochs, dropout, use_emb_mod
     print 'Tweet encoder state size: %s' % hidden_dim_size
 
     random.seed('hello world')
-    hashtag_datas, char_to_index, vocab_size = load_hashtag_data_and_vocabulary(HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR,
-                                                                                HUMOR_CHAR_TO_INDEX_FILE_PATH)
+    hashtag_datas, char_to_index, vocab_size = tools.load_hashtag_data_and_vocabulary(config.HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR,
+                                                                                config.HUMOR_CHAR_TO_INDEX_FILE_PATH)
     trial_hashtag_datas, _, trial_vocab_size = \
-        load_hashtag_data_and_vocabulary(HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR, None)
+        tools.load_hashtag_data_and_vocabulary(config.HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR, None)
 
     g = tf.Graph()
     with g.as_default():
-        model_vars = build_humor_model(vocab_size, use_embedding_model=use_emb_model,
-                                       use_character_model=use_char_model,
-                                       hidden_dim_size=hidden_dim_size)
+        model_vars = tools_tf.build_humor_model(vocab_size, use_embedding_model=use_emb_model,
+                                                use_character_model=use_char_model,
+                                                hidden_dim_size=hidden_dim_size)
         trainer_vars = build_embedding_humor_model_trainer(model_vars)
-        create_tensorboard_visualization('emb_humor_model')
-        training_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRAIN_DIR)
-        testing_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRIAL_DIR)
+        tools_tf.create_tensorboard_visualization('emb_humor_model')
+        training_hashtag_names = tools.get_hashtag_file_names(config.SEMEVAL_HUMOR_TRAIN_DIR)
+        testing_hashtag_names = tools.get_hashtag_file_names(config.SEMEVAL_HUMOR_TRIAL_DIR)
         accuracies = []
 
         sess, training_accuracy = train_on_all_other_hashtags(model_vars, trainer_vars, training_hashtag_names,
@@ -249,12 +239,12 @@ def load_build_train_and_predict(learning_rate, num_epochs, dropout, use_emb_mod
         print 'Mean training accuracy: %s' % training_accuracy
         print
         for hashtag_name in testing_hashtag_names:
-            accuracy, _ = predict_on_hashtag(sess,
-                                             model_vars,
-                                             hashtag_name,
-                                             HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR,
-                                             trial_hashtag_datas,
-                                             error_analysis_stats=[SEMEVAL_HUMOR_TRIAL_DIR, 10])
+            accuracy, _ = tools_tf.predict_on_hashtag(sess,
+                                                      model_vars,
+                                                      hashtag_name,
+                                                      config.HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR,
+                                                      trial_hashtag_datas,
+                                                      error_analysis_stats=[config.SEMEVAL_HUMOR_TRIAL_DIR, 10])
             print 'Hashtag %s accuracy: %s' % (hashtag_name, accuracy)
             accuracies.append(accuracy)
 
@@ -283,12 +273,12 @@ if __name__ == '__main__':
     hidden_dim_size = 800  # int(np.random.uniform(200, 3200))
     use_emb_model = True
     use_char_model = True
-    model_save_dir = EMB_CHAR_HUMOR_MODEL_DIR
+    model_save_dir = config.EMB_CHAR_HUMOR_MODEL_DIR
     if '-emb-only' in sys.argv:
         use_char_model = False
-        model_save_dir = EMB_HUMOR_MODEL_DIR
+        model_save_dir = config.EMB_HUMOR_MODEL_DIR
     elif '-char-only' in sys.argv:
         use_emb_model = False
-        model_save_dir = CHAR_HUMOR_MODEL_DIR
+        model_save_dir = config.CHAR_HUMOR_MODEL_DIR
     load_build_train_and_predict(learning_rate, num_epochs, dropout, use_emb_model,
                              use_char_model, model_save_dir, hidden_dim_size)

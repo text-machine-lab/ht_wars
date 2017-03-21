@@ -1,10 +1,10 @@
 """David Donahue 18 October 2016. Unit tests for ht_wars_char_model.py"""
 
-import ht_wars_cnn_model
-from ht_wars_cnn_model import HashtagWarsCharacterModel
-from ht_wars_cnn_model import load_hashtag_data_and_vocabulary
-from ht_wars_cnn_model import extract_hashtag_data_for_leave_one_out
-from ht_wars_cnn_model import TWEET_SIZE
+import humor_model_cnn_keras
+from humor_model_cnn_keras import HashtagWarsCharacterModel
+from humor_model_cnn_keras import load_hashtag_data_and_vocabulary
+from humor_model_cnn_keras import extract_hashtag_data_for_leave_one_out
+from humor_model_cnn_keras import TWEET_SIZE
 from config import HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
 import numpy as np
 from os import walk
