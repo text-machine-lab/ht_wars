@@ -1,6 +1,6 @@
 import os
 
-DATA_DIR = '../data/'
+DATA_DIR = './data/'
 
 try:
     from config_local import *
@@ -87,6 +87,11 @@ HUMOR_MAX_WORDS_IN_HASHTAG = 8
 GLOVE_EMB_SIZE = 200
 TWEET_SIZE = 140
 PHONETIC_EMB_SIZE = 200
+MAX_WORD_SIZE = 20
+MAX_PRONUNCIATION_SIZE = 20
+PHONE_CHAR_EMB_DIM = 30
+PHONE_ENCODER_LSTM_EMB_DIM = 200
+HUMOR_KEEP_PROB = 1.0
 
 # Mongo for Sacred's observer
 MONGO_ADDRESS = '127.0.0.1:27018'

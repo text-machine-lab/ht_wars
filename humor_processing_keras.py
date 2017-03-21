@@ -16,32 +16,26 @@ from os import walk
 import csv
 import cPickle as pickle
 import os
-import random
 import numpy as np
 import sys
+import config
+import tools
 
 sys.path.append('../')
-from config import SEMEVAL_HUMOR_TRAIN_DIR
-from config import SEMEVAL_HUMOR_TRIAL_DIR
-from config import HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
-from config import HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR
-from config import HUMOR_CHAR_TO_INDEX_FILE_PATH
-from tools import get_hashtag_file_names
-from tools import process_hashtag_data
 
 
 def main():
     # Find hashtags, create character vocabulary, print dataset statistics, extract/format tweet pairs and save everything.
     # Repeat this for both training and trial sets.
     print "Processing #HashtagWars training data..."
-    process_hashtag_data(SEMEVAL_HUMOR_TRAIN_DIR, HUMOR_CHAR_TO_INDEX_FILE_PATH, HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR)
+    tools.process_hashtag_data(config.SEMEVAL_HUMOR_TRAIN_DIR, config.HUMOR_CHAR_TO_INDEX_FILE_PATH, config.HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR)
     print "Processing #HashtagWars trial data..."
-    process_hashtag_data(SEMEVAL_HUMOR_TRIAL_DIR, HUMOR_CHAR_TO_INDEX_FILE_PATH, HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR, generate_index=False)
+    tools.process_hashtag_data(config.SEMEVAL_HUMOR_TRIAL_DIR, config.HUMOR_CHAR_TO_INDEX_FILE_PATH, config.HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR, generate_index=False)
 
 
 def test_reconstruct_tweets_from_file():
     max_tweet_size = 140
-    hashtags = get_hashtag_file_names(SEMEVAL_HUMOR_TRAIN_DIR)
+    hashtags = tools.get_hashtag_file_names(config.SEMEVAL_HUMOR_TRAIN_DIR)
     char_to_index = pickle.load(open('char_to_index.cpkl', 'rb'))
     index_to_char = {v: k for k, v in char_to_index.items()}
     for (dirpath, dirnames, filenames) in walk('.'):
@@ -57,7 +51,7 @@ def test_reconstruct_tweets_from_file():
                     tweets.append(tweet1)
                     tweets.append(tweet2)
                 tweets = list(set(tweets))
-                with open(SEMEVAL_HUMOR_TRAIN_DIR + filename.replace('_pairs.npy', '.tsv')) as tsv:
+                with open(config.SEMEVAL_HUMOR_TRAIN_DIR + filename.replace('_pairs.npy', '.tsv')) as tsv:
                     for line in csv.reader(tsv, dialect='excel-tab'):
                         tweet = line[1]
                         if tweet <= max_tweet_size:

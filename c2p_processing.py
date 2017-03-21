@@ -8,23 +8,16 @@ import sys
 import cPickle as pickle
 from numpy import int64
 
-from config import CMU_SYMBOLS_FILE_PATH
-from config import CMU_CHAR_TO_INDEX_FILE_PATH
-from config import CMU_PHONE_TO_INDEX_FILE_PATH
-from config import CMU_NP_WORDS_FILE_PATH
-from config import CMU_DICTIONARY_FILE_PATH
-from config import CMU_NP_PRONUNCIATIONS_FILE_PATH
-from tf_tools import MAX_WORD_SIZE
-from tf_tools import MAX_PRONUNCIATION_SIZE
+import config
 
 
 def main():
     print 'Starting program'
-    np_words, np_pronunciations, char_to_index, phone_to_index = extract_CMU_dataset(max_word_size=MAX_WORD_SIZE)
-    save_numpy_array(np_words, CMU_NP_WORDS_FILE_PATH)
-    save_numpy_array(np_pronunciations, CMU_NP_PRONUNCIATIONS_FILE_PATH)
-    save_pickle_file(char_to_index, CMU_CHAR_TO_INDEX_FILE_PATH)
-    save_pickle_file(phone_to_index, CMU_PHONE_TO_INDEX_FILE_PATH)
+    np_words, np_pronunciations, char_to_index, phone_to_index = extract_CMU_dataset(max_word_size=config.MAX_WORD_SIZE)
+    save_numpy_array(np_words, config.CMU_NP_WORDS_FILE_PATH)
+    save_numpy_array(np_pronunciations, config.CMU_NP_PRONUNCIATIONS_FILE_PATH)
+    save_pickle_file(char_to_index, config.CMU_CHAR_TO_INDEX_FILE_PATH)
+    save_pickle_file(phone_to_index, config.CMU_PHONE_TO_INDEX_FILE_PATH)
     print_word_pronunciation_pairs_from_file()
     print 'Done!'
 
@@ -44,7 +37,7 @@ def print_help_info():
 
 
 def extract_CMU_dataset(max_word_size=20):
-    print 'Extracting dataset from %s and %s' % (CMU_DICTIONARY_FILE_PATH, CMU_SYMBOLS_FILE_PATH)
+    print 'Extracting dataset from %s and %s' % (config.CMU_DICTIONARY_FILE_PATH, config.CMU_SYMBOLS_FILE_PATH)
     char_to_index = build_character_vocabulary_from_cmu()
     print 'Size of character vocabulary: %s' % len(char_to_index)
     print char_to_index
@@ -69,7 +62,7 @@ def build_character_vocabulary_from_cmu():
     to a unique index. All lines that start with a ; are ignored; they are comments."""
     print 'Building character vocabulary'
     characters = ['']
-    with open(CMU_DICTIONARY_FILE_PATH) as f:
+    with open(config.CMU_DICTIONARY_FILE_PATH) as f:
         for line in f:
             if line[0] != ';':  # All lines with ; are comments, ignore them
                 word, pronunciation = extract_word_and_pronunciation_from_line(line)
@@ -86,7 +79,7 @@ def build_character_vocabulary_from_cmu():
 def get_number_of_word_pronunciation_pairs():
     """Counts the number of word pronunciation pairs."""
     num_pairs = 0
-    with open(CMU_DICTIONARY_FILE_PATH) as f:
+    with open(config.CMU_DICTIONARY_FILE_PATH) as f:
         for line in f:
             if line[0] != ';': # All lines with ; are comments
                 # Valid pair. Count this one.
@@ -99,7 +92,7 @@ def build_phoneme_vocabulary_from_cmu():
     and associates each phoneme with an index."""
     print 'Building phoneme vocabulary'
     phonemes = ['']
-    with open(CMU_SYMBOLS_FILE_PATH) as f:
+    with open(config.CMU_SYMBOLS_FILE_PATH) as f:
         for line in f:
             phonemes.append(line[:-1])
     phone_to_index = {}
@@ -113,25 +106,25 @@ def extract_CMU_words_and_pronunciations_in_index_format(char_to_index, phone_to
     is a numpy row of indices, each index mapped to a character using char_to_index. Each pronunciation is
     a numpy row of indices, each index mapped to a phoneme using phone_to_index."""
     print 'Extracting words and their pronunciations as separate numpy arrays'
-    np_words = np.zeros([num_pairs, MAX_WORD_SIZE], dtype=int64)
-    np_pronunciations = np.zeros([num_pairs, MAX_PRONUNCIATION_SIZE], dtype=int64)
-    with open(CMU_DICTIONARY_FILE_PATH) as f:
+    np_words = np.zeros([num_pairs, config.MAX_WORD_SIZE], dtype=int64)
+    np_pronunciations = np.zeros([num_pairs, config.MAX_PRONUNCIATION_SIZE], dtype=int64)
+    with open(config.CMU_DICTIONARY_FILE_PATH) as f:
         counter = 0
         for line in f:
             if line[0] != ';': # All lines with ; are comments, ignore them.
                 word, pronunciation = extract_word_and_pronunciation_from_line(line)
                 for i in range(len(word)):
-                    if i < MAX_WORD_SIZE:
+                    if i < config.MAX_WORD_SIZE:
                         np_words[counter, i] = char_to_index[word[i]] # Convert character to index and store in array.
                 for i in range(len(pronunciation)):
-                    if i < MAX_PRONUNCIATION_SIZE:
+                    if i < config.MAX_PRONUNCIATION_SIZE:
                         np_pronunciations[counter, i] = phone_to_index[pronunciation[i]]
                 counter += 1
     # Shuffle.
     np_word_phone_pairs = np.concatenate([np_words, np_pronunciations], axis=1)
     np.random.shuffle(np_word_phone_pairs)
-    np_words_shuffled = np_word_phone_pairs[:, :MAX_WORD_SIZE]
-    np_pronunciations_shuffled = np_word_phone_pairs[:, MAX_WORD_SIZE:MAX_WORD_SIZE + MAX_PRONUNCIATION_SIZE]
+    np_words_shuffled = np_word_phone_pairs[:, :config.MAX_WORD_SIZE]
+    np_pronunciations_shuffled = np_word_phone_pairs[:, config.MAX_WORD_SIZE:config.MAX_WORD_SIZE + config.MAX_PRONUNCIATION_SIZE]
     
     return np_words_shuffled, np_pronunciations_shuffled
 
@@ -158,18 +151,18 @@ def print_word_pronunciation_pairs_from_file():
     """This program opens the file, runs through each valid
     line and prints word-pronunciation pairs."""
     print 'Printing saved word-pronunciation pairs'
-    np_words = np.load(CMU_NP_WORDS_FILE_PATH)
-    np_pronunciations = np.load(CMU_NP_PRONUNCIATIONS_FILE_PATH)
-    char_to_index = pickle.load(open(CMU_CHAR_TO_INDEX_FILE_PATH, 'rb'))
-    phone_to_index = pickle.load(open(CMU_PHONE_TO_INDEX_FILE_PATH, 'rb'))
+    np_words = np.load(config.CMU_NP_WORDS_FILE_PATH)
+    np_pronunciations = np.load(config.CMU_NP_PRONUNCIATIONS_FILE_PATH)
+    char_to_index = pickle.load(open(config.CMU_CHAR_TO_INDEX_FILE_PATH, 'rb'))
+    phone_to_index = pickle.load(open(config.CMU_PHONE_TO_INDEX_FILE_PATH, 'rb'))
     index_to_char = {v: k for k, v in char_to_index.iteritems()}
     index_to_phone = {v: k for k, v in phone_to_index.iteritems()}
     num_pairs_to_print = 100
     for i in range(-num_pairs_to_print, num_pairs_to_print):
         np_word = np_words[i,:]
         np_pronunciation = np_pronunciations[i,:]
-        word = ''.join([index_to_char[np_word[j]] for j in range(MAX_WORD_SIZE)])
-        pronunciation = ' '.join([index_to_phone[np_pronunciation[j]] for j in range(MAX_PRONUNCIATION_SIZE)])
+        word = ''.join([index_to_char[np_word[j]] for j in range(config.MAX_WORD_SIZE)])
+        pronunciation = ' '.join([index_to_phone[np_pronunciation[j]] for j in range(config.MAX_PRONUNCIATION_SIZE)])
         
         print word, pronunciation
 

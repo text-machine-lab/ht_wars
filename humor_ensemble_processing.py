@@ -1,21 +1,19 @@
 """David Donahue 2017. Trying out training and predicting using the humor model."""
-from keras import backend as K
-import tensorflow as tf
-import random
-import numpy as np
-import humor_predictor
 import cPickle as pickle
-from humor_model import load_build_train_and_predict
-from config import EMB_CHAR_HUMOR_MODEL_DIR, CHAR_HUMOR_MODEL_DIR, EMB_HUMOR_MODEL_DIR
-from config import HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR, HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR
-from config import HUMOR_CHAR_TO_INDEX_FILE_PATH, SEMEVAL_HUMOR_TRAIN_DIR
-from config import HUMOR_TRAIN_TWEET_PAIR_PREDICTIONS, HUMOR_TRAIN_PREDICTION_HASHTAGS
-from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR, HUMOR_TRAIN_PREDICTION_LABELS
-from config import SEMEVAL_HUMOR_TRIAL_DIR
-from tf_tools import GPU_OPTIONS
-from tools import load_hashtag_data_and_vocabulary, get_hashtag_file_names
-from tools import load_hashtag_data
+import random
 
+import numpy as np
+import tensorflow as tf
+from keras import backend as K
+
+import humor_predictor
+from config import EMB_CHAR_HUMOR_MODEL_DIR, CHAR_HUMOR_MODEL_DIR, EMB_HUMOR_MODEL_DIR
+from config import HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR, HUMOR_TRAIN_PREDICTION_LABELS
+from config import HUMOR_TRAIN_TWEET_PAIR_PREDICTIONS, HUMOR_TRAIN_PREDICTION_HASHTAGS
+from config import SEMEVAL_HUMOR_TRAIN_DIR
+from humor_model import load_build_train_and_predict
+from tools import get_hashtag_file_names
+from tools import load_hashtag_data
 
 learning_rate = .00005
 num_epochs = 1

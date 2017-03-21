@@ -2,15 +2,15 @@
 
 import numpy as np
 import cPickle as pickle
-from char2phone_processing import CMU_DICTIONARY_FILE_PATH
-from char2phone_processing import CMU_SYMBOLS_FILE_PATH
-from char2phone_processing import CMU_NP_WORDS_FILE_PATH
-from char2phone_processing import CMU_NP_PRONUNCIATIONS_FILE_PATH
-from char2phone_processing import get_number_of_word_pronunciation_pairs
-from char2phone_processing import MAX_WORD_SIZE
-from char2phone_processing import MAX_PRONUNCIATION_SIZE
-from char2phone_processing import CMU_CHAR_TO_INDEX_FILE_PATH
-from char2phone_processing import CMU_PHONE_TO_INDEX_FILE_PATH
+from c2p_processing import CMU_DICTIONARY_FILE_PATH
+from c2p_processing import CMU_SYMBOLS_FILE_PATH
+from c2p_processing import CMU_NP_WORDS_FILE_PATH
+from c2p_processing import CMU_NP_PRONUNCIATIONS_FILE_PATH
+from c2p_processing import get_number_of_word_pronunciation_pairs
+from c2p_processing import MAX_WORD_SIZE
+from c2p_processing import MAX_PRONUNCIATION_SIZE
+from c2p_processing import CMU_CHAR_TO_INDEX_FILE_PATH
+from c2p_processing import CMU_PHONE_TO_INDEX_FILE_PATH
 
 
 def main():

@@ -6,20 +6,11 @@ import cPickle as pickle
 from keras.layers import Convolution1D, MaxPooling1D
 from keras.layers import Input, Dense, Flatten, Embedding
 from keras.regularizers import l2
-from tools import convert_words_to_indices
-from tools import invert_dictionary
-from tools import load_hashtag_data
-from tools import extract_tweet_pair_from_hashtag_datas
-from config import *
+import tools
+import config
 import tensorflow.contrib.slim as slim
 
 GPU_OPTIONS = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
-
-MAX_WORD_SIZE = 20
-MAX_PRONUNCIATION_SIZE = 20
-PHONE_CHAR_EMB_DIM = 30
-PHONE_ENCODER_LSTM_EMB_DIM = 200
-HUMOR_DROPOUT = 1
 
 
 def create_character_model(tweet_size, vocab_size):
@@ -75,7 +66,7 @@ def build_humor_model(vocab_size, use_embedding_model=True, use_character_model=
     tf_second_input_tweets, tf_second_tweet_encoder_output = create_embedding_model(lstm_hidden_dim=hidden_dim_size)
 
     # Create character model to feed into dense layers
-    tweet1_conv_emb, tweet2_conv_emb, tf_tweet1, tf_tweet2 = create_character_model(TWEET_SIZE, vocab_size)
+    tweet1_conv_emb, tweet2_conv_emb, tf_tweet1, tf_tweet2 = create_character_model(config.TWEET_SIZE, vocab_size)
 
     # Concatenate encoders and process with dense layers
     dense_features = []
@@ -117,16 +108,16 @@ def create_embedding_model(lstm_hidden_dim=None):
     # Create placeholders
     tf_batch_size = tf.placeholder(tf.int32, name='batch_size')
     tf_dropout_rate = tf.placeholder(tf.float32, name='dropout_rate')
-    word_embedding_size = GLOVE_EMB_SIZE + PHONETIC_EMB_SIZE
+    word_embedding_size = config.GLOVE_EMB_SIZE + config.PHONETIC_EMB_SIZE
     if lstm_hidden_dim is None:
         lstm_hidden_dim = word_embedding_size * 2
     tf_first_input_tweets = tf.placeholder(dtype=tf.float32,
-                                           shape=[None, HUMOR_MAX_WORDS_IN_TWEET * word_embedding_size],
+                                           shape=[None, config.HUMOR_MAX_WORDS_IN_TWEET * word_embedding_size],
                                            name='first_tweets')
     tf_second_input_tweets = tf.placeholder(dtype=tf.float32,
-                                            shape=[None, HUMOR_MAX_WORDS_IN_TWEET * word_embedding_size],
+                                            shape=[None, config.HUMOR_MAX_WORDS_IN_TWEET * word_embedding_size],
                                             name='second_tweets')
-    tf_hashtag = tf.placeholder(dtype=tf.float32, shape=[None, HUMOR_MAX_WORDS_IN_HASHTAG * word_embedding_size],
+    tf_hashtag = tf.placeholder(dtype=tf.float32, shape=[None, config.HUMOR_MAX_WORDS_IN_HASHTAG * word_embedding_size],
                                 name='hashtag')
     # Create tweet LSTM encoders to feed into dense layers
     tf_first_input_tweets_dropout = tf.nn.dropout(tf_first_input_tweets, tf_dropout_rate)
@@ -135,13 +126,13 @@ def create_embedding_model(lstm_hidden_dim=None):
     tf_first_tweet_encoder_output, tf_first_tweet_hidden_state = build_lstm(lstm_hidden_dim, tf_batch_size,
                                                                             [tf_first_input_tweets_dropout],
                                                                             word_embedding_size,
-                                                                            HUMOR_MAX_WORDS_IN_TWEET,
+                                                                            config.HUMOR_MAX_WORDS_IN_TWEET,
                                                                             lstm_scope='TWEET_ENCODER',
                                                                             time_step_inputs=[])
     tf_second_tweet_encoder_output, tf_second_tweet_hidden_state = build_lstm(lstm_hidden_dim, tf_batch_size,
                                                                               [tf_second_input_tweets_dropout],
                                                                               word_embedding_size,
-                                                                              HUMOR_MAX_WORDS_IN_TWEET,
+                                                                              config.HUMOR_MAX_WORDS_IN_TWEET,
                                                                               lstm_scope='TWEET_ENCODER',
                                                                               reuse=True, time_step_inputs=[])
     return tf_batch_size, tf_dropout_rate, tf_first_input_tweets, tf_first_tweet_encoder_output, tf_hashtag, tf_second_input_tweets, tf_second_tweet_encoder_output
@@ -185,13 +176,13 @@ def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
         # PLACEHOLDERS. Model takes in a sequence of characters contained in tf_words.
         # The model also needs to know the batch size.
         tf_batch_size = tf.placeholder(tf.int32, name='batch_size')
-        tf_words = tf.placeholder(tf.int32, [None, MAX_WORD_SIZE], 'words')
+        tf_words = tf.placeholder(tf.int32, [None, config.MAX_WORD_SIZE], 'words')
         # Lookup up embeddings for all characters in each word.
-        tf_char_emb = tf.Variable(tf.random_normal([char_vocab_size, PHONE_CHAR_EMB_DIM]), name='character_emb')
+        tf_char_emb = tf.Variable(tf.random_normal([char_vocab_size, config.PHONE_CHAR_EMB_DIM]), name='character_emb')
         # Insert each character one by one into an LSTM.
-        lstm = tf.contrib.rnn.LSTMCell(num_units=PHONE_ENCODER_LSTM_EMB_DIM, state_is_tuple=True)
+        lstm = tf.contrib.rnn.LSTMCell(num_units=config.PHONE_ENCODER_LSTM_EMB_DIM, state_is_tuple=True)
         encoder_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
-        for i in range(MAX_WORD_SIZE):
+        for i in range(config.MAX_WORD_SIZE):
             tf_char_embedding = tf.nn.embedding_lookup(tf_char_emb, tf_words[:, i])
 
             with tf.variable_scope('LSTM_ENCODER') as lstm_scope:
@@ -199,8 +190,8 @@ def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
                     lstm_scope.reuse_variables()
                 encoder_output, encoder_hidden_state = lstm(tf_char_embedding, encoder_hidden_state)
         # Run encoder output through dense layer to process output
-        tf_encoder_output_w = tf.Variable(tf.random_normal([PHONE_ENCODER_LSTM_EMB_DIM, PHONE_ENCODER_LSTM_EMB_DIM]), name='encoder_output_emb')
-        tf_encoder_output_b = tf.Variable(tf.random_normal([PHONE_ENCODER_LSTM_EMB_DIM]), name='encoder_output_bias')
+        tf_encoder_output_w = tf.Variable(tf.random_normal([config.PHONE_ENCODER_LSTM_EMB_DIM, config.PHONE_ENCODER_LSTM_EMB_DIM]), name='encoder_output_emb')
+        tf_encoder_output_b = tf.Variable(tf.random_normal([config.PHONE_ENCODER_LSTM_EMB_DIM]), name='encoder_output_bias')
         encoder_output_emb = tf.matmul(encoder_output, tf_encoder_output_w) + tf_encoder_output_b
 
         decoder_hidden_state = lstm.zero_state(tf_batch_size, tf.float32)
@@ -210,7 +201,7 @@ def build_chars_to_phonemes_model(char_vocab_size, phone_vocab_size):
         tf_phone_pred_w = tf.Variable(tf.random_normal([lstm.output_size, phone_vocab_size]),
                                       name='phoneme_prediction_emb')
         tf_phone_pred_b = tf.Variable(tf.random_normal([phone_vocab_size]), name='phoneme_prediction_bias')
-        for j in range(MAX_PRONUNCIATION_SIZE):
+        for j in range(config.MAX_PRONUNCIATION_SIZE):
             with tf.variable_scope('LSTM_DECODER') as lstm_scope:
                 if j == 0:
                     decoder_output, decoder_hidden_state = lstm(encoder_output_emb, decoder_hidden_state)
@@ -265,10 +256,10 @@ def generate_phonetic_embs_from_words(words, char_to_index_path, phone_to_index_
     [tf_phonemes, lstm_hidden_state] = model_outputs
     tf_phonetic_emb = lstm_hidden_state
 
-    np_word_indices = convert_words_to_indices(words, char_to_index)
+    np_word_indices = tools.convert_words_to_indices(words, char_to_index)
     print np_word_indices
     # Prove words converted to indices correctly by reversing the process and printing.
-    index_to_char = invert_dictionary(char_to_index)
+    index_to_char = tools.invert_dictionary(char_to_index)
     print 'Example GloVe words recreated from indices:'
     for i in range(130, 140):
         np_word = np_word_indices[i, :]
@@ -283,7 +274,7 @@ def generate_phonetic_embs_from_words(words, char_to_index_path, phone_to_index_
     sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=GPU_OPTIONS))
     saver = tf.train.Saver(max_to_keep=10)
     # Restore model from previous save.
-    ckpt = tf.train.get_checkpoint_state(CHAR_2_PHONE_MODEL_DIR)
+    ckpt = tf.train.get_checkpoint_state(config.CHAR_2_PHONE_MODEL_DIR)
     if ckpt and ckpt.model_checkpoint_path:
         saver.restore(sess, ckpt.model_checkpoint_path)
     else:
@@ -313,12 +304,12 @@ def predict_on_hashtag(sess, model_vars, hashtag_name, hashtag_dir, hashtag_data
     on. error_analysis_stats should be a string and a number. The string is the location where Semeval hashtag .tsv files are kept(training or testing).
     The number is the number of worst tweet pairs to print."""
     print 'Predicting on hashtag %s' % hashtag_name
-    np_first_tweets_char, np_second_tweets_char = extract_tweet_pair_from_hashtag_datas(hashtag_datas, hashtag_name)
+    np_first_tweets_char, np_second_tweets_char = tools.extract_tweet_pair_from_hashtag_datas(hashtag_datas, hashtag_name)
 
     [tf_first_input_tweets, tf_second_input_tweets, tf_predictions, tf_tweet_humor_rating, tf_batch_size, tf_hashtag, tf_output_prob, tf_dropout_rate,
      tf_tweet1, tf_tweet2] = model_vars
 
-    np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag = load_hashtag_data(hashtag_dir, hashtag_name)
+    np_first_tweets, np_second_tweets, np_labels, first_tweet_ids, second_tweet_ids, np_hashtag = tools.load_hashtag_data(hashtag_dir, hashtag_name)
     np_predictions, np_output_prob = sess.run([tf_predictions, tf_output_prob],
                                               feed_dict={tf_first_input_tweets: np_first_tweets,
                                                          tf_second_input_tweets: np_second_tweets,

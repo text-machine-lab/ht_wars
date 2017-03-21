@@ -4,19 +4,10 @@ import cPickle as pickle
 import random
 import tensorflow as tf
 import numpy as np
-from config import HUMOR_INDEX_TO_WORD_FILE_PATH
-from config import HUMOR_WORD_TO_GLOVE_FILE_PATH
-from config import HUMOR_WORD_TO_PHONETIC_FILE_PATH
-from config import EMB_CHAR_HUMOR_MODEL_DIR, TWEET_SIZE
-from config import EMB_HUMOR_MODEL_DIR, CHAR_HUMOR_MODEL_DIR
-from config import TWEET_PAIR_LABEL_RANDOM_SEED
-from config import HUMOR_CHAR_TO_INDEX_FILE_PATH
-from config import SEMEVAL_HUMOR_TRIAL_DIR, SEMEVAL_HUMOR_EVAL_DIR
-from tools import convert_hashtag_to_embedding_tweet_pairs
-from tools import extract_tweet_pairs_from_file
-from tools import format_tweet_pairs, save_hashtag_data, get_hashtag_file_names
+import config
+import tools
 
-from tf_tools import build_humor_model, predict_on_hashtag, GPU_OPTIONS
+from tools_tf import build_humor_model, predict_on_hashtag, GPU_OPTIONS
 
 
 class HumorPredictor:
@@ -38,16 +29,16 @@ class HumorPredictor:
         self.use_char_model = use_char_model
         if v:
             print 'self.use_char_model: %s' % self.use_char_model
-        self.vocabulary = pickle.load(open(HUMOR_INDEX_TO_WORD_FILE_PATH, 'rb'))
+        self.vocabulary = pickle.load(open(config.HUMOR_INDEX_TO_WORD_FILE_PATH, 'rb'))
         if v:
             print 'len vocabulary: %s' % len(self.vocabulary)
-        self.word_to_glove = pickle.load(open(HUMOR_WORD_TO_GLOVE_FILE_PATH, 'rb'))
+        self.word_to_glove = pickle.load(open(config.HUMOR_WORD_TO_GLOVE_FILE_PATH, 'rb'))
         if v:
             print 'len word_to_glove: %s' % len(self.word_to_glove)
-        self.word_to_phonetic = pickle.load(open(HUMOR_WORD_TO_PHONETIC_FILE_PATH, 'rb'))
+        self.word_to_phonetic = pickle.load(open(config.HUMOR_WORD_TO_PHONETIC_FILE_PATH, 'rb'))
         if v:
             print 'len word_to_phonetic: %s' % len(self.word_to_phonetic)
-        self.char_to_index = pickle.load(open(HUMOR_CHAR_TO_INDEX_FILE_PATH, 'rb'))
+        self.char_to_index = pickle.load(open(config.HUMOR_CHAR_TO_INDEX_FILE_PATH, 'rb'))
         if v:
             print 'len char_to_index: %s' % len(self.char_to_index)
 
@@ -63,13 +54,13 @@ class HumorPredictor:
         tweet_input_dir - location of hashtag .tsv file
         hashtag_name - name of hashtag file without .tsv extension"""
         np_first_tweets, np_second_tweets, first_tweet_ids, second_tweet_ids, np_labels, np_hashtag_gloves = \
-            convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name,
+            tools.convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name,
                                                      self.word_to_glove, self.word_to_phonetic)
-        random.seed(TWEET_PAIR_LABEL_RANDOM_SEED + hashtag_name)
-        data = extract_tweet_pairs_from_file(tweet_input_dir + hashtag_name + '.tsv')
-        np_tweet_pairs, np_tweet_pair_labels = format_tweet_pairs(data, self.char_to_index)
-        np_first_tweets_char = np_tweet_pairs[:, :TWEET_SIZE]
-        np_second_tweets_char = np_tweet_pairs[:, TWEET_SIZE:]
+        random.seed(config.TWEET_PAIR_LABEL_RANDOM_SEED + hashtag_name)
+        data = tools.extract_tweet_pairs_from_file(tweet_input_dir + hashtag_name + '.tsv')
+        np_tweet_pairs, np_tweet_pair_labels = tools.format_tweet_pairs(data, self.char_to_index)
+        np_first_tweets_char = np_tweet_pairs[:, :config.TWEET_SIZE]
+        np_second_tweets_char = np_tweet_pairs[:, config.TWEET_SIZE:]
         hashtag_datas = [[hashtag_name, np_tweet_pairs]]
         np_predictions, np_output_prob = self.sess.run([self.tf_output, self.tf_output_prob],
                                                   feed_dict={self.tf_first_input_tweets: np_first_tweets,
@@ -100,13 +91,13 @@ def restore_model_from_save(model_var_dir, sess=None):
 
 def main():
     """Test for HumorMultiPredictor."""
-    hp = HumorPredictor(EMB_CHAR_HUMOR_MODEL_DIR)
-    hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_TRIAL_DIR)
-    eval_hashtag_names = get_hashtag_file_names(SEMEVAL_HUMOR_EVAL_DIR)
+    hp = HumorPredictor(config.EMB_CHAR_HUMOR_MODEL_DIR)
+    hashtag_names = tools.get_hashtag_file_names(config.SEMEVAL_HUMOR_TRIAL_DIR)
+    eval_hashtag_names = tools.get_hashtag_file_names(config.SEMEVAL_HUMOR_EVAL_DIR)
     accuracies = []
     for hashtag_name in hashtag_names:
         print hashtag_name
-        np_predictions, np_output_prob, np_labels, first_tweet_ids, second_tweet_ids = hp(SEMEVAL_HUMOR_TRIAL_DIR, hashtag_name)
+        np_predictions, np_output_prob, np_labels, first_tweet_ids, second_tweet_ids = hp(config.SEMEVAL_HUMOR_TRIAL_DIR, hashtag_name)
         accuracy = np.mean(np_predictions == np_labels)
         print np_output_prob
         print np_predictions
@@ -115,7 +106,7 @@ def main():
     print 'Trial accuracy: %s' % np.mean(accuracies)
     for hashtag_name in eval_hashtag_names:
         print hashtag_name
-        np_predictions2, np_output_prob, np_labels, first_tweet_ids, second_tweet_ids = hp(SEMEVAL_HUMOR_EVAL_DIR, hashtag_name)
+        np_predictions2, np_output_prob, np_labels, first_tweet_ids, second_tweet_ids = hp(config.SEMEVAL_HUMOR_EVAL_DIR, hashtag_name)
         print np_output_prob
         print np_predictions2
         print np_labels
