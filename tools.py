@@ -184,46 +184,6 @@ def convert_tweet_to_embeddings(tweets, word_to_glove, word_to_phonetic, max_num
     return np_tweet_embs
 
 
-def convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name, word_to_glove, word_to_phonetic):
-    """Load a tweets from a hashtag by its directory and name. Convert tweets to tweet pairs and return.
-
-    tweet_input_dir - location of tweet .tsv file
-    hashtag_name - name of hashtag file without .tsv extension
-    word_to_glove - dictionary mapping from words to glove vectors
-    word_to_phonetic - dictionary mapping from words to phonetic embeddings
-    Returns:
-    np_tweet1_gloves - numpy array of glove/phonetic vectors for all first tweets
-    np_tweet2_gloves - numpy array of glove/phonetic vectors for all second tweets
-    tweet1_id - tweet id of all first tweets in np_tweet1_gloves
-    tweet2_id - tweet id of all second tweets in np_tweet2_gloves
-    np_label - numpy array of funnier tweet labels; None if hashtag does not contain labels
-    np_hashtag_gloves - numpy array of glove/phonetic vectors for hashtag name"""
-    formatted_hashtag_name = ' '.join(hashtag_name.split('_')).lower()
-    tweets, labels, tweet_ids = load_tweets_from_hashtag(tweet_input_dir + hashtag_name + '.tsv',
-                                                         explicit_hashtag=formatted_hashtag_name)  # formatted_hashtag_name)
-    random.seed(config.TWEET_PAIR_LABEL_RANDOM_SEED + hashtag_name)
-    if len(labels) > 0:
-        tweet_pairs = extract_tweet_pairs_by_rank(tweets, labels, tweet_ids)
-    else:
-        tweet_pairs = extract_tweet_pairs_by_combination(tweets, tweet_ids)
-    tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
-    tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
-    tweet2 = [tweet_pair[2] for tweet_pair in tweet_pairs]
-    tweet2_id = [tweet_pair[3] for tweet_pair in tweet_pairs]
-    np_label = None
-    if len(labels) > 0:
-        labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
-        np_label = np.array(labels)
-    np_hashtag_gloves_col = convert_tweet_to_embeddings([formatted_hashtag_name], word_to_glove, word_to_phonetic,
-                                                        config.HUMOR_MAX_WORDS_IN_HASHTAG, config.GLOVE_EMB_SIZE, config.PHONETIC_EMB_SIZE)
-    np_hashtag_gloves = np.repeat(np_hashtag_gloves_col, len(tweet1), axis=0)
-    np_tweet1_gloves = convert_tweet_to_embeddings(tweet1, word_to_glove, word_to_phonetic, config.HUMOR_MAX_WORDS_IN_TWEET,
-                                                   config.GLOVE_EMB_SIZE, config.PHONETIC_EMB_SIZE)
-    np_tweet2_gloves = convert_tweet_to_embeddings(tweet2, word_to_glove, word_to_phonetic, config.HUMOR_MAX_WORDS_IN_TWEET,
-                                                   config.GLOVE_EMB_SIZE, config.PHONETIC_EMB_SIZE)
-    return np_tweet1_gloves, np_tweet2_gloves, tweet1_id, tweet2_id, np_label, np_hashtag_gloves
-
-
 def extract_tweet_pair_from_hashtag_datas(hashtag_datas, hashtag_name, tweet_size=config.TWEET_SIZE):
     for hashtag_data in hashtag_datas:
         current_hashtag_name = hashtag_data[0]
@@ -393,7 +353,7 @@ def format_text_for_embedding_model(text, hashtag_replace=None):
     return ' '.join(raw_output.split())
 
 
-def load_tweets_from_hashtag(filename, explicit_hashtag=None):
+def load_tweets_from_hashtag(filename):
     """Open hashtag file, and read each line. For each line,
     read a tweet, its corresponding tweet id, and a label that indicates
     if the tweet was a winner (2), top-ten (1) or non-winner (0) tweet.
@@ -410,10 +370,8 @@ def load_tweets_from_hashtag(filename, explicit_hashtag=None):
         for line in tsvread:
             tweet_id = line[0]
             tweet = line[1]
-            formatted_tweet = format_text_for_embedding_model(tweet, hashtag_replace=explicit_hashtag)
-            tweet_tokens = nltk.word_tokenize(formatted_tweet)
             tweet_ids.append(int(tweet_id))
-            tweets.append(' '.join(tweet_tokens).lower())
+            tweets.append(tweet)
             if len(line) > 2:
                 if line_does_not_contain_label:
                     print 'Warning: Hashtag labels not formatted correctly.'

@@ -20,6 +20,7 @@ from config import PHONETIC_EMB_SIZE
 from tools import format_text_for_embedding_model
 from tools import load_tweets_from_hashtag
 from tools import extract_tweet_pairs_by_rank
+import humor_processing
 
 
 def main():
@@ -35,6 +36,48 @@ def main():
     print 'Tests successful'
 
 
+def test_extract_tweet_pairs():
+    print 'TEST: test_extract_tweet_pairs'
+    """Check if extract_tweet_pairs function returns same pairs
+    if given the same seed twice."""
+    hashtag_name = 'America_In_4_Words'
+    tweets, tweet_labels, tweet_ids = load_tweets_from_hashtag(SEMEVAL_HUMOR_TRAIN_DIR + hashtag_name + '.tsv')
+    f_tweets = humor_processing.format_tweet_text(tweets)
+
+    random.seed(a=TWEET_PAIR_LABEL_RANDOM_SEED)
+    copy_tweet_pairs = extract_tweet_pairs_by_rank(f_tweets, tweet_labels, tweet_ids)
+    copy_tweet1 = [tweet_pair[0] for tweet_pair in copy_tweet_pairs]
+    copy_tweet1_id = [tweet_pair[1] for tweet_pair in copy_tweet_pairs]
+    copy_tweet2 = [tweet_pair[2] for tweet_pair in copy_tweet_pairs]
+    copy_tweet2_id = [tweet_pair[3] for tweet_pair in copy_tweet_pairs]
+    copy_labels = [tweet_pair[4] for tweet_pair in copy_tweet_pairs]
+
+    random.seed(a=TWEET_PAIR_LABEL_RANDOM_SEED)
+    tweet_pairs = extract_tweet_pairs_by_rank(f_tweets, tweet_labels, tweet_ids)
+    tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
+    tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
+    tweet2 = [tweet_pair[2] for tweet_pair in tweet_pairs]
+    tweet2_id = [tweet_pair[3] for tweet_pair in tweet_pairs]
+    labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
+
+
+
+    # for i in range(10):
+    #     print tweet1[i] + "|" + tweet2[i] + "|" + copy_tweet1[i] + "|" + copy_tweet2[i]
+
+    assert len(copy_tweet1) == len(tweet1)
+    assert all([(copy_tweet1[i] == tweet1[i]) for i in range(len(tweet1))])
+    assert copy_tweet1 == tweet1
+    assert tweet1 == copy_tweet1
+
+    assert tweet1_id == copy_tweet1_id
+    assert tweet2 == copy_tweet2
+    assert tweet2_id == copy_tweet2_id
+    assert labels == copy_labels
+
+
+
+
 def test_embedding_character_labels_match():
     print 'TEST: test_embedding_character_labels_match'
     example_hashtag = 'Cat_History'
@@ -46,38 +89,6 @@ def test_embedding_character_labels_match():
     np_emb_labels_trial = np.load(open(HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR + example_hashtag_trial + '_label.npy'))
     np_char_labels_trial = np.load(open(HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR + example_hashtag_trial + '_labels.npy'))
     assert np.array_equal(np_emb_labels_trial, np_char_labels_trial)
-
-
-def test_extract_tweet_pairs():
-    print 'TEST: test_extract_tweet_pairs'
-    """Check if extract_tweet_pairs function returns same pairs
-    if given the same seed twice."""
-    hashtag_name = 'America_In_4_Words'
-    tweets, labels, tweet_ids = load_tweets_from_hashtag(SEMEVAL_HUMOR_TRAIN_DIR + hashtag_name + '.tsv',
-                                                         explicit_hashtag='')
-    random.seed(TWEET_PAIR_LABEL_RANDOM_SEED)
-    tweet_pairs = extract_tweet_pairs_by_rank(tweets, labels, tweet_ids)
-    tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
-    tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
-    tweet2 = [tweet_pair[2] for tweet_pair in tweet_pairs]
-    tweet2_id = [tweet_pair[3] for tweet_pair in tweet_pairs]
-    labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
-
-    random.seed(TWEET_PAIR_LABEL_RANDOM_SEED)
-    copy_tweet_pairs = extract_tweet_pairs_by_rank(tweets, labels, tweet_ids)
-    copy_tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
-    copy_tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
-    copy_tweet2 = [tweet_pair[2] for tweet_pair in tweet_pairs]
-    copy_tweet2_id = [tweet_pair[3] for tweet_pair in tweet_pairs]
-    copy_labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
-
-    assert tweet1 == copy_tweet1
-    assert tweet1_id == copy_tweet1_id
-    assert tweet2 == copy_tweet2
-    assert tweet2_id == copy_tweet2_id
-    assert labels == copy_labels
-
-
 
 
 def test_print_words_without_gloves():
@@ -191,7 +202,8 @@ def reconstruct_text_from_gloves(np_text, max_len_text, word_emb_size, word_to_g
 
 def test_load_tweets_from_hashtag():
     print 'TEST: test_load_tweets_from_hashtag'
-    tweets, labels, tweet_ids = load_tweets_from_hashtag('./test_hashtag_file.txt')
+    tweets, labels, tweet_ids = load_tweets_from_hashtag('./data/test_hashtag_file.txt')
+    tweets = humor_processing.format_tweet_text(tweets)
     print tweets[0]
     print tweets[1]
     assert tweets[0] == 'waste hard disk 2016 # this is a text file containing a single hashtag'
