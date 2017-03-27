@@ -6,8 +6,8 @@ import tensorflow as tf
 import numpy as np
 import config
 import tools
-
-from tools_tf import build_humor_model, predict_on_hashtag, GPU_OPTIONS
+import humor_model
+from tools_tf import predict_on_hashtag, GPU_OPTIONS
 
 
 class HumorPredictor:
@@ -42,9 +42,11 @@ class HumorPredictor:
         if v:
             print 'len char_to_index: %s' % len(self.char_to_index)
 
+        self.hm = humor_model.HumorModel()
+
         [self.tf_first_input_tweets, self.tf_second_input_tweets, self.tf_output, tf_tweet_humor_rating,
          self.tf_batch_size, tf_hashtag, self.tf_output_prob, self.tf_dropout_rate, self.tf_tweet1, self.tf_tweet2] \
-            = build_humor_model(len(self.char_to_index), use_embedding_model=self.use_emb_model,
+            = self.build_humor_model(len(self.char_to_index), use_embedding_model=self.use_emb_model,
                                 use_character_model=self.use_char_model, hidden_dim_size=None)
         self.sess = restore_model_from_save(model_var_dir, sess=sess)
 

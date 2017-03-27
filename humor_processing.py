@@ -14,58 +14,9 @@ import cPickle as pickle
 import numpy as np
 import random
 import nltk
+import humor_formatter
 
 
-class HumorFormatter:
-    """The humor predictor is meant to simplify the process of converting #HashtagWars tweets
-    into ready-to-use tweet pair features that can be fed directly into a humor model. This class will
-    take tweets, labels, and tweet ids to produce model input features."""
-    def __init__(self, word_to_glove=None, word_to_phonetic=None):
-        self.word_to_glove = word_to_glove
-        self.word_to_phonetic = word_to_phonetic
-        self.vocabulary = []
-
-    def update_vocab(self, lines, max_word_size=15):
-        for line in lines:
-            tokens = line.split()
-            for word in tokens:
-                if len(word) < max_word_size and word not in self.vocabulary:
-                    self.vocabulary.append(word)
-        return self.vocabulary
-
-    def format(self, tweets, labels, tweet_ids):
-        """Load a tweets from a hashtag by its directory and name. Convert tweets to tweet pairs and return.
-
-        tweet_input_dir - location of tweet .tsv file
-        hashtag_name - name of hashtag file without .tsv extension
-        word_to_glove - dictionary mapping from words to glove vectors
-        word_to_phonetic - dictionary mapping from words to phonetic embeddings
-        Returns:
-        np_tweet1_gloves - numpy array of glove/phonetic vectors for all first tweets
-        np_tweet2_gloves - numpy array of glove/phonetic vectors for all second tweets
-        tweet1_id - tweet id of all first tweets in np_tweet1_gloves
-        tweet2_id - tweet id of all second tweets in np_tweet2_gloves
-        np_label - numpy array of funnier tweet labels; None if hashtag does not contain labels
-        np_hashtag_gloves - numpy array of glove/phonetic vectors for hashtag name"""
-        if len(labels) > 0:
-            tweet_pairs = tools.extract_tweet_pairs_by_rank(tweets, labels, tweet_ids)
-        else:
-            tweet_pairs = tools.extract_tweet_pairs_by_combination(tweets, tweet_ids)
-        tweet1 = [tweet_pair[0] for tweet_pair in tweet_pairs]
-        tweet1_id = [tweet_pair[1] for tweet_pair in tweet_pairs]
-        tweet2 = [tweet_pair[2] for tweet_pair in tweet_pairs]
-        tweet2_id = [tweet_pair[3] for tweet_pair in tweet_pairs]
-        np_label = None
-        if len(labels) > 0:
-            labels = [tweet_pair[4] for tweet_pair in tweet_pairs]
-            np_label = np.array(labels)
-        np_tweet1_gloves = tools.convert_tweet_to_embeddings(tweet1, self.word_to_glove, self.word_to_phonetic,
-                                                       config.HUMOR_MAX_WORDS_IN_TWEET,
-                                                       config.GLOVE_EMB_SIZE, config.PHONETIC_EMB_SIZE)
-        np_tweet2_gloves = tools.convert_tweet_to_embeddings(tweet2, self.word_to_glove, self.word_to_phonetic,
-                                                       config.HUMOR_MAX_WORDS_IN_TWEET,
-                                                       config.GLOVE_EMB_SIZE, config.PHONETIC_EMB_SIZE)
-        return np_tweet1_gloves, np_tweet2_gloves, tweet1_id, tweet2_id, np_label
 
 
 def main():
@@ -102,14 +53,14 @@ def convert_all_tweets_to_tweet_pairs_represented_by_glove_and_phonetic_embeddin
 
 
 def create_vocabulary_and_glove_phonetic_mappings():
-    hf = HumorFormatter()
+    hf = humor_formatter.HumorFormatter()
 
     """For all hashtags, for the first and second tweet in all tweet pairs separately,
     for all words in the tweet, look up a glove embedding and generate a phonetic embedding.
     Save everything."""
     print 'Creating vocabulary, phonetic embeddings and GloVe mappings (may take a while)'
     train_hashtag_names = tools.get_hashtag_file_names(config.SEMEVAL_HUMOR_TRAIN_DIR)
-    hf = HumorFormatter(None, None)
+    hf = humor_formatter.HumorFormatter()
     for hashtag_name in train_hashtag_names:
         tweets, labels, tweet_ids = tools.load_tweets_from_hashtag(config.SEMEVAL_HUMOR_TRAIN_DIR + hashtag_name + '.tsv')
         f_tweets = format_tweet_text(tweets)
@@ -176,7 +127,7 @@ def convert_tweets_to_embedding_tweet_pairs(word_to_glove, word_to_phonetic, twe
     if hashtag_names is None:
         hashtag_names = tools.get_hashtag_file_names(tweet_input_dir)
 
-    hf = HumorFormatter(word_to_glove=word_to_glove, word_to_phonetic=word_to_phonetic)
+    hf = humor_formatter.HumorFormatter(word_to_glove=word_to_glove, word_to_phonetic=word_to_phonetic)
 
     for hashtag_name in hashtag_names:
         print 'Loading hashtag: %s' % hashtag_name
