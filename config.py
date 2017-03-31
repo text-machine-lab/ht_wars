@@ -80,6 +80,12 @@ BOOST_TREE_EVAL_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'boost_tree_eval
 
 BOOST_TREE_MODEL_FILE_PATH = os.path.join(DATA_DIR, 'boost_tree_model.bin')
 
+# Pop culture corpus
+POP_CULTURE_CORPUS_DIR = os.path.join(DATA_DIR, 'pop_culture_corpus/')
+MOVIE_TITLES_FILE = 'movie_titles.txt'
+BOOK_TITLES_FILE = 'book_titles.txt'
+SONG_TITLES_FILE = 'song_titles.txt'
+TV_SHOW_TITLES_FILE = 'tv_show_titles.txt'
 
 # PARAMETERS
 HUMOR_MAX_WORDS_IN_TWEET = 20  # All winning tweets are under 30 words long
