@@ -3,6 +3,9 @@ import os
 import config
 import csv
 import unittest2
+import editdistance
+
+import tools
 
 
 def load_song_titles(filepath=os.path.join(config.POP_CULTURE_CORPUS_DIR, config.SONG_TITLES_FILE)):
@@ -70,7 +73,7 @@ def load_book_titles(filepath=os.path.join(config.POP_CULTURE_CORPUS_DIR, config
     return books
 
 
-def find_titles_in_tweet(tweet, titles, min_frac=0.75):
+def find_titles_in_tweet(tweet, titles, min_frac=0.5):
     """Returns titles contained in the tweet, each with
     a number indicating percent match.
 
@@ -80,38 +83,44 @@ def find_titles_in_tweet(tweet, titles, min_frac=0.75):
     Returns: A list of entries, each entry of form [title, frac] where frac is the
     percent of title found in tweet."""
     contained_titles = []
-    tweet_lower = tweet.lower()
+    tweet_lower_no_hash = tools.remove_hashtag_from_tweets([tweet.lower()])[0].replace('@midnight', '')
+    # print tweet_lower_no_hash
+    tweet_tokens = tweet_lower_no_hash.split()
+    tweet_lower_no_hash = ' '.join(tweet_tokens)
     for title in titles:
         name = title.lower()
-        num_matches = find_num_tokens_string_match(name, tweet_lower)
-        percent_match = num_matches * 1.0 / len(name.split())
+        name_tokens = name.split()
+        # if name_tokens[0] in tweet_tokens:
+
+        num_errors = editdistance.eval(tweet_lower_no_hash, name)
+        percent_match = 1 - num_errors / (1.0 * len(name))
         if percent_match >= min_frac:
             contained_titles.append([title, percent_match])
     return contained_titles
 
 
-def find_num_tokens_string_match(sub, source):
-    """Calculates the percentage of substring sub can be found in string source.
-    It finds if the first word in sub exists in source, and check all remaining
-    words in sub to see if they exist after the first word. This function is not
-    symmetric between sub and source!
-
-    sub, source - two strings, one assumed to be a substring of the other
-    Returns: the total number of matching words. Returns 0 if first word of
-    sub not found in source, or if len(sub) > len(source)"""
-    sub_tokens = sub.split()
-    source_tokens = source.split()
-    for source_token_index in range(len(source_tokens)):
-        if source_tokens[source_token_index] == sub_tokens[0]:
-            # We found match
-            num_tokens_match = 1
-            for sub_token_index in range(1, len(sub_tokens)):
-                if source_token_index + sub_token_index >= len(source_tokens):
-                    break
-                if source_tokens[source_token_index + sub_token_index] == sub_tokens[sub_token_index]:
-                    num_tokens_match += 1
-            return num_tokens_match
-    return 0
+# def find_num_tokens_string_match(sub, source, include_stopwords=True):
+#     """Calculates the percentage of substring sub can be found in string source.
+#     It finds if the first word in sub exists in source, and check all remaining
+#     words in sub to see if they exist after the first word. This function is not
+#     symmetric between sub and source!
+#
+#     sub, source - two strings, one assumed to be a substring of the other
+#     Returns: the total number of matching words. Returns 0 if first word of
+#     sub not found in source, or if len(sub) > len(source)"""
+#     sub_tokens = sub.split()
+#     source_tokens = source.split()
+#     for source_token_index in range(len(source_tokens)):
+#         if source_tokens[source_token_index] == sub_tokens[0]:
+#             # We found match
+#             num_tokens_match = 1
+#             for sub_token_index in range(1, len(sub_tokens)):
+#                 if source_token_index + sub_token_index >= len(source_tokens):
+#                     break
+#                 if source_tokens[source_token_index + sub_token_index] == sub_tokens[sub_token_index]:
+#                     num_tokens_match += 1
+#             return num_tokens_match
+#     return 0
 
 
 class PopCultureCorpusLoadersTest(unittest2.TestCase):
@@ -137,9 +146,9 @@ class PopCultureCorpusLoadersTest(unittest2.TestCase):
         assert "The Green Mile" in contained_title_names
 
     def test_find_titles_in_tweet_insert_your_own_tweet_and_observe(self):
-        movies = load_movie_titles()
+        movies = load_book_titles()
         movie_titles = [movie[0] for movie in movies]
-        your_tweet = "so many star wars"
+        your_tweet = "the girl who loved tom cats"
         your_minimum_fraction_of_similarity=0.6
         contained_titles = find_titles_in_tweet(your_tweet, movie_titles, min_frac=your_minimum_fraction_of_similarity)
         print contained_titles
