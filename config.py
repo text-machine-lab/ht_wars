@@ -86,6 +86,7 @@ MOVIE_TITLES_FILE = 'movie_titles.txt'
 BOOK_TITLES_FILE = 'book_titles.txt'
 SONG_TITLES_FILE = 'song_titles.txt'
 TV_SHOW_TITLES_FILE = 'tv_show_titles.txt'
+MOVIE_TITLES_LARGE_FILE = 'movie_titles_large.txt'
 
 # PARAMETERS
 HUMOR_MAX_WORDS_IN_TWEET = 20  # All winning tweets are under 30 words long
