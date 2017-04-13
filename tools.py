@@ -241,8 +241,12 @@ def remove_hashtag_from_tweets(tweets):
     return tweets_without_hashtags
 
 
-def extract_tweet_pairs_by_rank(tweets, tweet_ranks, tweet_ids):
-    """Creates pairs of the form [first_tweet, first_tweet_id, second_tweet, second_tweet_id, first_tweet_is_funnier]"""
+def extract_tweet_pairs_by_rank(tweets, tweet_ranks, tweet_ids, funnier_tweet_always_first=False):
+    """Creates tweet pairs from a list of tweets, by pairing tweets with different ranks.
+
+    funnier_tweet_first - Funnier tweet in pair always goes first (debugging)
+
+    Returns: A list of pairs of the form [first_tweet, first_tweet_id, second_tweet, second_tweet_id, first_tweet_is_funnier]"""
     winner, winner_ids, top_ten, top_ten_ids, non_winners, non_winner_ids = \
         divide_tweets_by_rank(tweets, tweet_ids, tweet_ranks)
 
@@ -252,7 +256,11 @@ def extract_tweet_pairs_by_rank(tweets, tweet_ranks, tweet_ids):
     for non_winning_tweet, non_winning_id in zip(non_winners, non_winner_ids):
         for top_ten_tweet, top_ten_id in zip(winner + top_ten, winner_ids + top_ten_ids):
             # Create pair
-            funnier_tweet_first = bool(random.getrandbits(1))
+            if funnier_tweet_always_first:
+                funnier_tweet_first = True
+            else:
+                funnier_tweet_first = bool(random.getrandbits(1))
+
             if funnier_tweet_first:
                 pairs.append([top_ten_tweet, top_ten_id, non_winning_tweet, non_winning_id, 1])
             else:
@@ -261,7 +269,11 @@ def extract_tweet_pairs_by_rank(tweets, tweet_ranks, tweet_ids):
     for top_ten_tweet, top_ten_id in zip(top_ten, top_ten_ids):
         for winning_tweet, winning_id in zip(winner, winner_ids):
             # Create pair
-            funnier_tweet_first = bool(random.getrandbits(1))
+            if funnier_tweet_always_first:
+                funnier_tweet_first = True
+            else:
+                funnier_tweet_first = bool(random.getrandbits(1))
+
             if funnier_tweet_first:
                 pairs.append([winning_tweet, winning_id, top_ten_tweet, top_ten_id, 1])
             else:

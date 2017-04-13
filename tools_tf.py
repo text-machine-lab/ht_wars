@@ -1,11 +1,13 @@
 """David Donahue 2016. This script deals primarily with tensorflow build operations. This script
 separates functions that do import tensorflow from those that don't."""
-import tensorflow as tf
-import numpy as np
 import cPickle as pickle
-import tools
-import config
+
+import numpy as np
+import tensorflow as tf
 import tensorflow.contrib.slim as slim
+
+import config
+from helpers import tools
 
 GPU_OPTIONS = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
 

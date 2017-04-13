@@ -1,10 +1,11 @@
 """Helper functions designed to laod data from the pop culture corpus."""
-import os
-import config
 import csv
-import unittest2
-import editdistance
+import os
 
+import editdistance
+import unittest2
+
+import config
 import tools
 
 
@@ -82,7 +83,7 @@ def load_book_titles(filepath=os.path.join(config.POP_CULTURE_CORPUS_DIR, config
     return books
 
 
-def find_titles_in_tweet(tweet, titles, min_frac=0.5):
+def find_titles_in_tweet(tweet, titles, min_frac=0.6):
     """Returns titles contained in the tweet, each with
     a number indicating percent match.
 
