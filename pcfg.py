@@ -146,3 +146,12 @@ class PopCultureFeatureGeneratorTest(unittest2.TestCase):
                                                                     funnier_first=True, min_match_score=1.1)
         assert np_features.shape == (5, 8)
         assert np.isclose(np_features, np.zeros([5,8])).all()
+
+    def test_labels_and_ids(self):
+        """Generate tweet pairs, then confirm labels are correct."""
+        tweets = ["Harry Potter and the Sorcerer's Stone #Hashtag", "Love Yourself #Hashtag", "#Hashtag Touch of Evil",
+                  "Band of bros #Hashtag"]
+        np_features, np_labels, tweet_pair_ids = self.pcfg.generate(tweets, [2, 1, 1, 0], [0, 1, 2, 3],
+                                                                    funnier_first=True)
+        assert np.array_equal(np_labels, [1, 1, 1, 1, 1])
+        assert tweet_pair_ids == [[0, 3], [1, 3], [2, 3], [0, 1], [0, 2]]

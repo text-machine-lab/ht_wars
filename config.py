@@ -7,18 +7,23 @@ try:
 except ImportError:
     pass
 
+# Throw all data related to emb/char humor model into subdirectory
+HUMOR_MODEL_DATA_DIR = os.path.join(DATA_DIR, 'hm/')
+# Throw all model save dirs into subdirectory
+MODEL_SAVE_DIR = os.path.join(DATA_DIR, 'all_models/')
+
 # Random seed to synchronize tweet pair creation between models
 TWEET_PAIR_LABEL_RANDOM_SEED = 'hello world'
 
 # GloVe embedding dataset path
-WORD_VECTORS_FILE_PATH = os.path.join(DATA_DIR, 'glove.twitter.27B/glove.twitter.27B.200d.txt')
+WORD_VECTORS_FILE_PATH = os.path.join(HUMOR_MODEL_DATA_DIR, 'glove.twitter.27B/glove.twitter.27B.200d.txt')
 
 # Main #HashtagWars dataset paths
-SEMEVAL_HUMOR_TRAIN_DIR = os.path.join(DATA_DIR, 'train_dir/train_data/')
-SEMEVAL_HUMOR_TRIAL_DIR = os.path.join(DATA_DIR, 'trial_dir/trial_data/')
-SEMEVAL_HUMOR_EVAL_DIR = os.path.join(DATA_DIR, 'evaluation_dir/evaluation_data/')
+SEMEVAL_HUMOR_TRAIN_DIR = os.path.join(HUMOR_MODEL_DATA_DIR, 'train_dir/train_data/')
+SEMEVAL_HUMOR_TRIAL_DIR = os.path.join(HUMOR_MODEL_DATA_DIR, 'trial_dir/trial_data/')
+SEMEVAL_HUMOR_EVAL_DIR = os.path.join(HUMOR_MODEL_DATA_DIR, 'evaluation_dir/evaluation_data/')
 
-SEMEVAL_EVAL_PREDICTIONS = os.path.join(DATA_DIR, 'evaluation_dir/evaluation_predict/')
+SEMEVAL_EVAL_PREDICTIONS = os.path.join(HUMOR_MODEL_DATA_DIR, 'evaluation_dir/evaluation_predict/')
 
 # Character-to-phoneme model paths
 CMU_SYMBOLS_FILE_PATH = os.path.join(DATA_DIR, 'cmudict-0.7b.symbols.txt')
@@ -37,33 +42,40 @@ EMB_HUMOR_MODEL_DIR = os.path.join(DATA_DIR, 'emb-only_humor_models/')
 CHAR_HUMOR_MODEL_DIR = os.path.join(DATA_DIR, 'char-only_humor_models/')
 
 # Prediction input for ensemble model (training)
-HUMOR_TRAIN_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'train_tweet_pair_predictions.cpkl')
-HUMOR_TRAIN_PREDICTION_HASHTAGS = os.path.join(DATA_DIR, 'train_prediction_hashtags')
-HUMOR_TRAIN_PREDICTION_LABELS = os.path.join(DATA_DIR, 'train_prediction_labels')
+HUMOR_TRAIN_TWEET_PAIR_PREDICTIONS = os.path.join(HUMOR_MODEL_DATA_DIR, 'train_tweet_pair_predictions.cpkl')
+HUMOR_TRAIN_PREDICTION_HASHTAGS = os.path.join(HUMOR_MODEL_DATA_DIR, 'train_prediction_hashtags')
+HUMOR_TRAIN_PREDICTION_LABELS = os.path.join(HUMOR_MODEL_DATA_DIR, 'train_prediction_labels')
 
 # Prediction input for ensemble model (trial)
-HUMOR_TRIAL_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'trial_tweet_pair_predictions.cpkl')
-HUMOR_TRIAL_PREDICTION_HASHTAGS = os.path.join(DATA_DIR, 'trial_prediction_hashtags.cpkl')
-HUMOR_TRIAL_PREDICTION_LABELS = os.path.join(DATA_DIR, 'trial_prediction_labels.cpkl')
-HUMOR_TRIAL_PREDICTION_FIRST_TWEET_IDS = os.path.join(DATA_DIR, 'trial_prediction_first_tweet_ids.cpkl')
-HUMOR_TRIAL_PREDICTION_SECOND_TWEET_IDS = os.path.join(DATA_DIR, 'trial_prediction_second_tweet_ids.cpkl')
+HUMOR_TRIAL_TWEET_PAIR_PREDICTIONS = os.path.join(HUMOR_MODEL_DATA_DIR, 'trial_tweet_pair_predictions.cpkl')
+HUMOR_TRIAL_PREDICTION_HASHTAGS = os.path.join(HUMOR_MODEL_DATA_DIR, 'trial_prediction_hashtags.cpkl')
+HUMOR_TRIAL_PREDICTION_LABELS = os.path.join(HUMOR_MODEL_DATA_DIR, 'trial_prediction_labels.cpkl')
+HUMOR_TRIAL_PREDICTION_FIRST_TWEET_IDS = os.path.join(HUMOR_MODEL_DATA_DIR, 'trial_prediction_first_tweet_ids.cpkl')
+HUMOR_TRIAL_PREDICTION_SECOND_TWEET_IDS = os.path.join(HUMOR_MODEL_DATA_DIR, 'trial_prediction_second_tweet_ids.cpkl')
 
 # Prediction input for ensemble model (evaluation)
-HUMOR_EVAL_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'eval_tweet_pair_predictions.cpkl')
-HUMOR_EVAL_PREDICTION_HASHTAGS = os.path.join(DATA_DIR, 'eval_prediction_hashtags.cpkl')
-HUMOR_EVAL_PREDICTION_LABELS = os.path.join(DATA_DIR, 'eval_prediction_labels.cpkl')
-HUMOR_EVAL_PREDICTION_FIRST_TWEET_IDS = os.path.join(DATA_DIR, 'eval_prediction_first_tweet_ids.cpkl')
-HUMOR_EVAL_PREDICTION_SECOND_TWEET_IDS = os.path.join(DATA_DIR, 'eval_prediction_second_tweet_ids.cpkl')
+HUMOR_EVAL_TWEET_PAIR_PREDICTIONS = os.path.join(HUMOR_MODEL_DATA_DIR, 'eval_tweet_pair_predictions.cpkl')
+HUMOR_EVAL_PREDICTION_HASHTAGS = os.path.join(HUMOR_MODEL_DATA_DIR, 'eval_prediction_hashtags.cpkl')
+HUMOR_EVAL_PREDICTION_LABELS = os.path.join(HUMOR_MODEL_DATA_DIR, 'eval_prediction_labels.cpkl')
+HUMOR_EVAL_PREDICTION_FIRST_TWEET_IDS = os.path.join(HUMOR_MODEL_DATA_DIR, 'eval_prediction_first_tweet_ids.cpkl')
+HUMOR_EVAL_PREDICTION_SECOND_TWEET_IDS = os.path.join(HUMOR_MODEL_DATA_DIR, 'eval_prediction_second_tweet_ids.cpkl')
 
-HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR = os.path.join(DATA_DIR, 'train_numpy_tweet_pairs/')
-HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR = os.path.join(DATA_DIR, 'trial_numpy_tweet_pairs/')
-HUMOR_CHAR_TO_INDEX_FILE_PATH = os.path.join(DATA_DIR, 'humor_char_to_index.cpkl')
-HUMOR_INDEX_TO_WORD_FILE_PATH = os.path.join(DATA_DIR, 'humor_index_to_word.cpkl')
-HUMOR_WORD_TO_GLOVE_FILE_PATH = os.path.join(DATA_DIR, 'humor_word_to_glove.cpkl')
-HUMOR_WORD_TO_PHONETIC_FILE_PATH = os.path.join(DATA_DIR, 'humor_word_to_phonetic.cpkl')
+# Save directories for training and trial sets, for character-based features for humor model
+HUMOR_TRAIN_TWEET_PAIR_CHAR_DIR = os.path.join(HUMOR_MODEL_DATA_DIR, 'train_numpy_tweet_pairs/')
+HUMOR_TRIAL_TWEET_PAIR_CHAR_DIR = os.path.join(HUMOR_MODEL_DATA_DIR, 'trial_numpy_tweet_pairs/')
 
-HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR = os.path.join(DATA_DIR, 'training_tweet_pair_embeddings/')
-HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR = os.path.join(DATA_DIR, 'trial_tweet_pair_embeddings/')
+# Save directories for training and trial sets, for embedding-based features for humor model
+HUMOR_TRAIN_TWEET_PAIR_EMBEDDING_DIR = os.path.join(HUMOR_MODEL_DATA_DIR, 'training_tweet_pair_embeddings/')
+HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR = os.path.join(HUMOR_MODEL_DATA_DIR, 'trial_tweet_pair_embeddings/')
+
+# Save directories for training and trial sets, for pop culture-based features for humor model
+HUMOR_TRAIN_POP_CULTURE_FEATURE_DIR = os.path.join(HUMOR_MODEL_DATA_DIR, 'training_pop_culture_features/')
+HUMOR_TRIAL_POP_CULTURE_FEATURE_DIR = os.path.join(HUMOR_MODEL_DATA_DIR, 'trial_pop_culture_features/')
+
+HUMOR_CHAR_TO_INDEX_FILE_PATH = os.path.join(HUMOR_MODEL_DATA_DIR, 'humor_char_to_index.cpkl')
+HUMOR_INDEX_TO_WORD_FILE_PATH = os.path.join(HUMOR_MODEL_DATA_DIR, 'humor_index_to_word.cpkl')
+HUMOR_WORD_TO_GLOVE_FILE_PATH = os.path.join(HUMOR_MODEL_DATA_DIR, 'humor_word_to_glove.cpkl')
+HUMOR_WORD_TO_PHONETIC_FILE_PATH = os.path.join(HUMOR_MODEL_DATA_DIR, 'humor_word_to_phonetic.cpkl')
 
 # Boost tree humor model paths
 # BOOST_TREE_TWEET_PAIR_TRAINING_DIR = os.path.join(DATA_DIR, 'training_tweet_pair_tree_data/')
@@ -73,11 +85,9 @@ HUMOR_TRIAL_TWEET_PAIR_EMBEDDING_DIR = os.path.join(DATA_DIR, 'trial_tweet_pair_
 BOOST_TREE_TWEET_PAIR_TRAIN_DIR = os.path.join(DATA_DIR, 'tree_train_data/')
 BOOST_TREE_TWEET_PAIR_TRIAL_DIR = os.path.join(DATA_DIR, 'tree_trial/')
 BOOST_TREE_TWEET_PAIR_EVAL_DIR = os.path.join(DATA_DIR, 'tree_eval_data/')
-
 BOOST_TREE_TRAIN_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'boost_tree_train_tweet_pair_predictions.cpkl')
 BOOST_TREE_TRIAL_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'boost_tree_trial_tweet_pair_predictions.cpkl')
 BOOST_TREE_EVAL_TWEET_PAIR_PREDICTIONS = os.path.join(DATA_DIR, 'boost_tree_eval_tweet_pair_predictions.cpkl')
-
 BOOST_TREE_MODEL_FILE_PATH = os.path.join(DATA_DIR, 'boost_tree_model.bin')
 
 # Pop culture corpus
