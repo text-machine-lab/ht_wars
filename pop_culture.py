@@ -9,6 +9,22 @@ import config
 import tools
 
 
+def load_all_genre_title_names():
+    """Load titles from the movie, song, tv_show, and book genres.
+    Use the default pop culture corpus directory.
+
+    Returns: [movie titles, song titles, tv show titles, book titles]"""
+    movie_entries = load_movie_titles()
+    movie_titles = [movie_entry[0] for movie_entry in movie_entries]
+    song_entries = load_song_titles()
+    song_titles = [song_entry[0] for song_entry in song_entries]
+    tv_show_entries = load_tv_show_titles()
+    tv_show_titles = [tv_show_entry[0] for tv_show_entry in tv_show_entries]
+    book_entries = load_book_titles()
+    book_titles = [book_entry[0] for book_entry in book_entries]
+    return movie_titles, song_titles, tv_show_titles, book_titles
+
+
 def load_song_titles(filepath=os.path.join(config.POP_CULTURE_CORPUS_DIR, config.SONG_TITLES_FILE)):
     """Loads information for each popular song title in the file specified by 'filepath'.
 
