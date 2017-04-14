@@ -7,7 +7,7 @@ import tensorflow as tf
 import tensorflow.contrib.slim as slim
 
 import config
-from helpers import tools
+import tools
 
 GPU_OPTIONS = tf.GPUOptions(per_process_gpu_memory_fraction=0.7)
 
