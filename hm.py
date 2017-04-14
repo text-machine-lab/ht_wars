@@ -13,8 +13,8 @@ import numpy as np
 import sklearn
 import tensorflow as tf
 
-from sacred import Experiment
-from sacred.observers import MongoObserver
+# from sacred import Experiment
+# from sacred.observers import MongoObserver
 
 import config
 import tools_tf
@@ -26,8 +26,8 @@ from keras.layers import Input, Dense, Flatten, Embedding
 from keras.regularizers import l2
 
 
-ex = Experiment('humor_model')
-ex.observers.append(MongoObserver.create(db_name='humor_runs'))
+# ex = Experiment('humor_model')
+# ex.observers.append(MongoObserver.create(db_name='humor_runs'))
 
 
 # @ex.config
@@ -87,6 +87,8 @@ class HumorModel():
         # Create character model to feed into dense layers
         tweet1_conv_emb, tweet2_conv_emb, tf_tweet1, tf_tweet2 = self.build_character_config(config.TWEET_SIZE, vocab_size)
 
+        # Add pop culture features here
+
         # Concatenate encoders and process with dense layers
         dense_features = []
         if use_embedding_model:
@@ -119,11 +121,13 @@ class HumorModel():
         for var in trainable_vars:
             print var.name + ' ' + str(var.get_shape())
 
-        # return {'first_tweet_emb': tf_first_input_tweets, 'second_tweet_emb': tf_second_input_tweets, 'predictions': output,
-        #         'logits': tf_tweet_humor_rating, 'probabilities': }
-
-        return [tf_first_input_tweets, tf_second_input_tweets, output, tf_tweet_humor_rating, tf_batch_size, tf_hashtag,
-                output_prob, tf_dropout_rate, tf_tweet1, tf_tweet2]  # Model vars
+        return [tf_first_input_tweets, tf_second_input_tweets, output, tf_tweet_humor_rating, tf_batch_size,
+                tf_hashtag, output_prob, tf_dropout_rate, tf_tweet1, tf_tweet2]  # Model vars
+        #
+        # return {'first_input_tweets':tf_first_input_tweets, 'second_input_tweets':tf_second_input_tweets,
+        #         'output':output, 'humor_rating':tf_tweet_humor_rating, 'batch_size':tf_batch_size
+        #         'output_prob':output_prob, 'keep_rate':tf_dropout_rate, 'first_input_tweets_char':tf_tweet1,
+        #         'second_input_tweets_char': tf_tweet2}  # Model vars
 
     def build_character_config(self, tweet_size, vocab_size):
         """Load two tweets, analyze them with convolution and predict which is funnier."""
@@ -393,7 +397,7 @@ def load_build_train_and_predict(learning_rate, num_epochs, dropout, use_emb_mod
             'test_accuracy': test_accuracy}
 
 
-@ex.main
+#@ex.main
 def main(learning_rate, num_epochs, dropout, use_emb_model,
          use_char_model, model_save_dir, hidden_dim_size, leave_out_hashtags=[]):
     load_build_train_and_predict(learning_rate, num_epochs, dropout, use_emb_model,

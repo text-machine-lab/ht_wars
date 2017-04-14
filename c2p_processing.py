@@ -122,7 +122,7 @@ def extract_CMU_words_and_pronunciations_in_index_format(char_to_index, phone_to
                 counter += 1
     # Shuffle.
     np_word_phone_pairs = np.concatenate([np_words, np_pronunciations], axis=1)
-    np.random.shuffle(np_word_phone_pairs)
+    # np.random.shuffle(np_word_phone_pairs)
     np_words_shuffled = np_word_phone_pairs[:, :config.MAX_WORD_SIZE]
     np_pronunciations_shuffled = np_word_phone_pairs[:, config.MAX_WORD_SIZE:config.MAX_WORD_SIZE + config.MAX_PRONUNCIATION_SIZE]
     

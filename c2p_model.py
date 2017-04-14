@@ -20,7 +20,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 batch_size = 100
 training_fraction = .6
 learning_rate = 0.0005
-n_epochs = 15
+n_epochs = 0
 
 
 def main():
@@ -40,7 +40,7 @@ def main():
     
     model_inputs, model_outputs = tools_tf.build_chars_to_phonemes_model(len(char_to_index), len(phone_to_index))
     training_inputs, training_outputs = build_trainer(model_inputs, model_outputs)
-    tools_tf.create_tensorboard_visualization('c2p_model')
+    #tools_tf.create_tensorboard_visualization('c2p_model')
     sess = train_model(model_inputs,
                        model_outputs,
                        training_inputs,
@@ -52,11 +52,11 @@ def main():
                                                                               np_testing_words,
                                                                               np_testing_pronunciations,
                                                                               sess=sess)
-    print 'Model test accuracy: %s' % accuracy
+    # print 'Model test accuracy: %s' % accuracy
     num_examples_to_print = 100
-    print_phoneme_label_prediction_pairs(np_testing_words[:num_examples_to_print],
-                                         np_testing_predictions[:num_examples_to_print],
-                                         np_testing_pronunciations[:num_examples_to_print],
+    print_phoneme_label_prediction_pairs(np_testing_words[:num_examples_to_print, :],
+                                         np_testing_predictions[:num_examples_to_print, :],
+                                         np_testing_pronunciations[:num_examples_to_print, :],
                                          index_to_char,
                                          index_to_phone)
 
@@ -64,7 +64,7 @@ def main():
 def build_trainer(model_inputs, model_outputs):
     print 'Building trainer component'
     tf_batch_size = model_inputs[1]
-    tf_labels = tf.placeholder(tf.int32, [None, tools_tf.MAX_PRONUNCIATION_SIZE], 'pronunciations')
+    tf_labels = tf.placeholder(tf.int32, [None, config.MAX_PRONUNCIATION_SIZE], 'pronunciations')
     tf_phonemes = model_outputs[0]
     tf_cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=tf_phonemes, labels=tf_labels, name='loss')
     tf_loss = tf.reduce_sum(tf_cross_entropy) / tf.cast(tf_batch_size, tf.float32)
@@ -176,8 +176,8 @@ def evaluate_model_performance_on_test_set(model_inputs, model_outputs, np_words
 def import_words_and_pronunciations_from_files(dir_path=''):
     np_words = np.load(dir_path + config.CMU_NP_WORDS_FILE_PATH)
     np_pronunciations = np.load(dir_path + config.CMU_NP_PRONUNCIATIONS_FILE_PATH)
-    char_to_index = pickle.load(open(dir_path + CMU_CHAR_TO_INDEX_FILE_PATH, 'rb'))
-    phone_to_index = pickle.load(open(dir_path + CMU_PHONE_TO_INDEX_FILE_PATH, 'rb'))
+    char_to_index = pickle.load(open(dir_path + config.CMU_CHAR_TO_INDEX_FILE_PATH, 'rb'))
+    phone_to_index = pickle.load(open(dir_path + config.CMU_PHONE_TO_INDEX_FILE_PATH, 'rb'))
     return np_words, np_pronunciations, char_to_index, phone_to_index
 
 
@@ -200,9 +200,9 @@ def print_phoneme_label_prediction_pairs(np_words, np_predictions, np_labels, in
         np_word = np_words[i,:]
         np_prediction = np_predictions[i,:]
         np_label = np_labels[i,:]
-        word = ''.join([index_to_char[np_word[j]] for j in range(tools_tf.MAX_WORD_SIZE)])
-        prediction = ' '.join([index_to_phone[np_prediction[j]] for j in range(tools_tf.MAX_PRONUNCIATION_SIZE)])
-        label = ' '.join([index_to_phone[np_label[j]] for j in range(tools_tf.MAX_PRONUNCIATION_SIZE)])
+        word = ''.join([index_to_char[np_word[j]] for j in range(config.MAX_WORD_SIZE)])
+        prediction = ' '.join([index_to_phone[np_prediction[j]] for j in range(config.MAX_PRONUNCIATION_SIZE)])
+        label = ' '.join([index_to_phone[np_label[j]] for j in range(config.MAX_PRONUNCIATION_SIZE)])
         print word, ' | ', prediction, ' | ', label
 
 

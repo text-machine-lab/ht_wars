@@ -79,13 +79,13 @@ def create_vocabulary_and_glove_phonetic_mappings():
     print 'Size of vocabulary: %s' % len(hf.vocabulary)
     print 'Number of GloVe vectors found: %s' % len(word_to_glove)
     print 'Size of a GloVe vector: %s' % len(word_to_glove['the'])
-    print 'Size of a phonetic embedding: %s' % len(word_to_phonetic['the'])
-    print 'Saving %s' % config.HUMOR_INDEX_TO_WORD_FILE_PATH
-    pickle.dump(hf.vocabulary, open(config.HUMOR_INDEX_TO_WORD_FILE_PATH, 'wb'))
+    # print 'Size of a phonetic embedding: %s' % len(word_to_phonetic['the'])
     print 'Saving %s' % config.HUMOR_WORD_TO_GLOVE_FILE_PATH
     pickle.dump(word_to_glove, open(config.HUMOR_WORD_TO_GLOVE_FILE_PATH, 'wb'))
     print 'Saving %s' % config.HUMOR_WORD_TO_PHONETIC_FILE_PATH
     pickle.dump(word_to_phonetic, open(config.HUMOR_WORD_TO_PHONETIC_FILE_PATH, 'wb'))
+    print 'Saving %s' % config.HUMOR_INDEX_TO_WORD_FILE_PATH
+    pickle.dump(hf.vocabulary, open(config.HUMOR_INDEX_TO_WORD_FILE_PATH, 'wb'))
 
 
 def format_tweet_text(tweets, explicit_hashtag=None):
