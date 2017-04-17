@@ -6,7 +6,8 @@ import tensorflow as tf
 import numpy as np
 import config
 import tools
-import humor_model
+import hm
+import humor_processing
 from tools_tf import predict_on_hashtag, GPU_OPTIONS
 
 
@@ -42,11 +43,11 @@ class HumorPredictor:
         if v:
             print 'len char_to_index: %s' % len(self.char_to_index)
 
-        self.hm = humor_model.HumorModel()
+        self.hm = hm.HumorModel()
 
         [self.tf_first_input_tweets, self.tf_second_input_tweets, self.tf_output, tf_tweet_humor_rating,
          self.tf_batch_size, tf_hashtag, self.tf_output_prob, self.tf_dropout_rate, self.tf_tweet1, self.tf_tweet2] \
-            = self.build_humor_model(len(self.char_to_index), use_embedding_model=self.use_emb_model,
+            = self.hm.build(len(self.char_to_index), use_embedding_model=self.use_emb_model,
                                 use_character_model=self.use_char_model, hidden_dim_size=None)
         self.sess = restore_model_from_save(model_var_dir, sess=sess)
 
@@ -56,7 +57,7 @@ class HumorPredictor:
         tweet_input_dir - location of hashtag .tsv file
         hashtag_name - name of hashtag file without .tsv extension"""
         np_first_tweets, np_second_tweets, first_tweet_ids, second_tweet_ids, np_labels, np_hashtag_gloves = \
-            tools.convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name,
+            humor_processing.convert_hashtag_to_embedding_tweet_pairs(tweet_input_dir, hashtag_name,
                                                      self.word_to_glove, self.word_to_phonetic)
         random.seed(config.TWEET_PAIR_LABEL_RANDOM_SEED + hashtag_name)
         data = tools.extract_tweet_pairs_from_file(tweet_input_dir + hashtag_name + '.tsv')

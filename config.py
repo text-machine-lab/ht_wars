@@ -22,6 +22,7 @@ WORD_VECTORS_FILE_PATH = os.path.join(HUMOR_MODEL_DATA_DIR, 'glove.twitter.27B/g
 SEMEVAL_HUMOR_TRAIN_DIR = os.path.join(HUMOR_MODEL_DATA_DIR, 'train_dir/train_data/')
 SEMEVAL_HUMOR_TRIAL_DIR = os.path.join(HUMOR_MODEL_DATA_DIR, 'trial_dir/trial_data/')
 SEMEVAL_HUMOR_EVAL_DIR = os.path.join(HUMOR_MODEL_DATA_DIR, 'evaluation_dir/evaluation_data/')
+SEMEVAL_HUMOR_GOLD_DIR = os.path.join(HUMOR_MODEL_DATA_DIR, 'gold_data/')
 
 SEMEVAL_EVAL_PREDICTIONS = os.path.join(HUMOR_MODEL_DATA_DIR, 'evaluation_dir/evaluation_predict/')
 

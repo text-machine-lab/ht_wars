@@ -41,6 +41,8 @@ def main():
     model_inputs, model_outputs = tools_tf.build_chars_to_phonemes_model(len(char_to_index), len(phone_to_index))
     training_inputs, training_outputs = build_trainer(model_inputs, model_outputs)
     #tools_tf.create_tensorboard_visualization('c2p_model')
+    # sess = tf.InteractiveSession()
+    # sess.run(tf.global_variables_initializer())
     sess = train_model(model_inputs,
                        model_outputs,
                        training_inputs,
